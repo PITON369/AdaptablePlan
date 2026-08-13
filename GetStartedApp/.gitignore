@@ -1,0 +1,10 @@
+**/bin
+**/obj
+*.dll
+packages/
+.vs/
+.vscode/tasks.json
+.idea
+.contextkeeper
+.kilo
+CLAUDE.md
