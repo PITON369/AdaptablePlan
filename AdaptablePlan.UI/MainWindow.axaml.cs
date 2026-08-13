@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace GetStartedApp;
+namespace AdaptablePlan.UI;
 
 public partial class MainWindow : Window
 {
