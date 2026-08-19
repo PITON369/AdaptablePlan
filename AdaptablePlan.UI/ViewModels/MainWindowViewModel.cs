@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using AdaptablePlan.Core.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AdaptablePlan.UI.ViewModels;
 
@@ -14,4 +15,33 @@ public partial class MainWindowViewModel : ViewModelBase
         new() { StartTime = "10:15", EndTime = "11:00", Activity = "Task C" },
         new() { StartTime = "11:00", EndTime = "11:30", Activity = "Task D" },
     ];
+
+    [ObservableProperty]
+    private bool _isNewTaskOpen;
+
+    [ObservableProperty]
+    private ScheduleEntry _newTaskEntry = new();
+
+    [RelayCommand]
+    void OpenNewTask()
+    {
+        NewTaskEntry = new();
+        IsNewTaskOpen = true;
+    }
+
+    [RelayCommand]
+    void SaveNewTask()
+    {
+        if (!string.IsNullOrWhiteSpace(NewTaskEntry.Activity))
+        {
+            Schedule.Add(NewTaskEntry);
+            IsNewTaskOpen = false;
+        }
+    }
+
+    [RelayCommand]
+    void CancelNewTask()
+    {
+        IsNewTaskOpen = false;
+    }
 }
