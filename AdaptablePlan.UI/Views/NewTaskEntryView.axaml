@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="200"
+             x:Class="AdaptablePlan.UI.Views.NewTaskEntryView"
+             x:DataType="vm:MainWindowViewModel"
+             xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             Padding="16">
+    <StackPanel Spacing="12">
+        <TextBlock FontWeight="SemiBold" FontSize="16">New Task</TextBlock>
+
+        <Grid ColumnDefinitions="* * *" RowDefinitions="* * *">
+            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Start"/>
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NewTaskEntry.StartTime}" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,8,0,0">End</TextBlock>
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewTaskEntry.EndTime}" Margin="0,8,0,0" />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,8,0,0">Activity</TextBlock>
+            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewTaskEntry.Activity}" Margin="0,8,0,0" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}" Classes="secondary" />
+            <Button Content="Save" Command="{Binding SaveNewTaskCommand}" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

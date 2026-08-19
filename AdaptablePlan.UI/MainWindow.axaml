@@ -3,21 +3,29 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+        xmlns:views="using:AdaptablePlan.UI.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
         x:DataType="vm:MainWindowViewModel"
         x:Class="AdaptablePlan.UI.MainWindow"
         Title="AdaptablePlan" Width="800" Height="600">
-    <ScrollViewer Margin="16">
-        <ItemsControl ItemsSource="{Binding Schedule}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,2">
-                        <TextBlock Width="90" Text="{Binding StartTime}" />
-                        <TextBlock Width="90" Text="{Binding EndTime}" />
-                        <TextBlock Text="{Binding Activity}" />
-                    </StackPanel>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </ScrollViewer>
+    <Grid>
+        <DockPanel Margin="16" IsVisible="{Binding !IsNewTaskOpen}">
+            <Button DockPanel.Dock="Bottom" Content="New task" Margin="0,8,0,0"
+                    Command="{Binding OpenNewTaskCommand}"/>
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Schedule}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,2">
+                                <TextBlock Width="90" Text="{Binding StartTime}" />
+                                <TextBlock Width="90" Text="{Binding EndTime}" />
+                                <TextBlock Text="{Binding Activity}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+        <views:NewTaskEntryView Margin="16" IsVisible="{Binding IsNewTaskOpen}" />
+    </Grid>
 </Window>
