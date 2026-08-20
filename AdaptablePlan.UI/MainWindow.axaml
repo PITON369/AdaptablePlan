@@ -10,8 +10,15 @@
         Title="AdaptablePlan" Width="800" Height="600">
     <Grid>
         <DockPanel Margin="16" IsVisible="{Binding !IsNewTaskOpen}">
-            <Button DockPanel.Dock="Bottom" Content="New task" Margin="0,8,0,0"
-                    Command="{Binding OpenNewTaskCommand}"/>
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                        Spacing="8" Margin="0,8,0,0">
+                <Button Content="{Binding DayStartedText}"
+                        Command="{Binding ToggleDayCommand}" />
+                <Button Content="Finish Task"
+                        Command="{Binding FinishCurrentTaskCommand}" />
+                <Button Content="New task" Margin="8,0,0,0"
+                        Command="{Binding OpenNewTaskCommand}"/>
+            </StackPanel>
             <ScrollViewer>
                 <ItemsControl ItemsSource="{Binding Schedule}">
                     <ItemsControl.ItemTemplate>
