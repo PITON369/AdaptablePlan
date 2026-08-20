@@ -1,29 +1,97 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             xmlns:models="using:AdaptablePlan.Core.Models"
+             xmlns:converters="using:AdaptablePlan.UI.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="200"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
              x:Class="AdaptablePlan.UI.Views.NewTaskEntryView"
              x:DataType="vm:MainWindowViewModel"
-             xmlns:vm="using:AdaptablePlan.UI.ViewModels"
              Padding="16">
+    <UserControl.Resources>
+        <converters:TaskTypeDisplayConverter x:Key="TaskTypeDisplayConverter" />
+    </UserControl.Resources>
     <StackPanel Spacing="12">
-        <TextBlock FontWeight="SemiBold" FontSize="16">New Task</TextBlock>
+        <TextBlock FontWeight="SemiBold" FontSize="18">New Task</TextBlock>
 
-        <Grid ColumnDefinitions="* * *" RowDefinitions="* * *">
-            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Start"/>
-            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NewTaskEntry.StartTime}" />
+        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto Auto Auto Auto Auto Auto Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
+                       Margin="0,0,8,0" Text="Type" />
+            <ComboBox Grid.Row="0" Grid.Column="1"
+                      ItemsSource="{Binding TaskTypes}"
+                      SelectedValue="{Binding CurrentTask.Type}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource TaskTypeDisplayConverter}}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,8,0,0">End</TextBlock>
-            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewTaskEntry.EndTime}" Margin="0,8,0,0" />
+            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"
+                       Margin="0,8,8,0" Text="Name" />
+            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,8,0,0"
+                     Text="{Binding CurrentTask.Name}" />
 
-            <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,8,0,0">Activity</TextBlock>
-            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewTaskEntry.Activity}" Margin="0,8,0,0" />
+            <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"
+                       Margin="0,8,8,0" Text="Duration (min)"
+                       IsVisible="{Binding ShowDuration}" />
+            <TextBox Grid.Row="2" Grid.Column="1" Margin="0,8,0,0"
+                     Text="{Binding CurrentTask.DurationMinutes}"
+                     PlaceholderText="e.g. 30"
+                     IsVisible="{Binding ShowDuration}" />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center"
+                       Margin="0,8,8,0" Text="Position"
+                       IsVisible="{Binding IsRecurringOrThings}" />
+            <TextBox Grid.Row="3" Grid.Column="1" Margin="0,8,0,0"
+                     Text="{Binding CurrentTask.Position}"
+                     IsVisible="{Binding IsRecurringOrThings}" />
+
+            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                        Spacing="6" Margin="0,8,0,0"
+                        IsVisible="{Binding ShowDaysOfWeek}">
+                <TextBlock FontWeight="SemiBold" Text="Days of Week" />
+                <UniformGrid Rows="1" Columns="7" Margin="0,4,0,0">
+                    <CheckBox Content="Mon"
+                              IsChecked="{Binding DaysOfWeekSelection[Monday]}" />
+                    <CheckBox Content="Tue"
+                              IsChecked="{Binding DaysOfWeekSelection[Tuesday]}" />
+                    <CheckBox Content="Wed"
+                              IsChecked="{Binding DaysOfWeekSelection[Wednesday]}" />
+                    <CheckBox Content="Thu"
+                              IsChecked="{Binding DaysOfWeekSelection[Thursday]}" />
+                    <CheckBox Content="Fri"
+                              IsChecked="{Binding DaysOfWeekSelection[Friday]}" />
+                    <CheckBox Content="Sat"
+                              IsChecked="{Binding DaysOfWeekSelection[Saturday]}" />
+                    <CheckBox Content="Sun"
+                              IsChecked="{Binding DaysOfWeekSelection[Sunday]}" />
+                </UniformGrid>
+            </StackPanel>
+
+            <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center"
+                       Margin="0,8,8,0" Text="Start Time"
+                       IsVisible="{Binding IsFixedTime}" />
+            <TextBox Grid.Row="5" Grid.Column="1" Margin="0,8,0,0"
+                     Text="{Binding CurrentTask.StartTime}"
+                     PlaceholderText="HH:MM"
+                     IsVisible="{Binding IsFixedTime}" />
+
+            <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center"
+                       Margin="0,8,8,0" Text="End Time"
+                       IsVisible="{Binding IsFixedTime}" />
+            <TextBox Grid.Row="6" Grid.Column="1" Margin="0,8,0,0"
+                     Text="{Binding CurrentTask.EndTime}"
+                     PlaceholderText="HH:MM"
+                     IsVisible="{Binding IsFixedTime}" />
         </Grid>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}" Classes="secondary" />
-            <Button Content="Save" Command="{Binding SaveNewTaskCommand}" IsDefault="True" />
+            <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}"
+                    Classes="secondary" />
+            <Button Content="Save" Command="{Binding SaveNewTaskCommand}"
+                    IsDefault="True" />
         </StackPanel>
     </StackPanel>
 </UserControl>
