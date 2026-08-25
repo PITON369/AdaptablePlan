@@ -1,11 +1,21 @@
 using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AdaptablePlan.UI.ViewModels;
 
 public static class ViewModelLocator
 {
-    private static readonly Lazy<MainWindowViewModel> _mainWindow =
-        new(() => new MainWindowViewModel());
+    private static IServiceProvider? _services;
+    private static MainWindowViewModel? _cached;
 
-    public static MainWindowViewModel MainWindow => _mainWindow.Value;
+    /// <summary>Call once from Program.Main after building the DI container.</summary>
+    public static void Initialize(IServiceProvider services)
+    {
+        _services = services;
+        _cached = null; // reset cache
+    }
+
+    public static MainWindowViewModel MainWindow => _cached
+        ??= (_services?.GetRequiredService<MainWindowViewModel>()
+            ?? new MainWindowViewModel());
 }

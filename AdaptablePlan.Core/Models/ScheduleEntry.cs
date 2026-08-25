@@ -1,8 +1,11 @@
+using System;
+
 namespace AdaptablePlan.Core.Models;
 
 public class ScheduleEntry
 {
-    public string StartTime { get; init; } = string.Empty;
-    public string EndTime { get; init; } = string.Empty;
-    public string Activity { get; init; } = string.Empty;
+    public Guid Id { get; set; }
+    public string StartTime { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
+    public string Activity { get; set; } = string.Empty;
 }
