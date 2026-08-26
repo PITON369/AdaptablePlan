@@ -13,7 +13,14 @@
         <converters:TaskTypeDisplayConverter x:Key="TaskTypeDisplayConverter" />
     </UserControl.Resources>
     <StackPanel Spacing="12">
-        <TextBlock FontWeight="SemiBold" FontSize="18">New Task</TextBlock>
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock FontWeight="SemiBold" FontSize="18"
+                       IsVisible="{Binding !IsEditing}"
+                       Text="New Task" />
+            <TextBlock FontWeight="SemiBold" FontSize="18"
+                       IsVisible="{Binding IsEditing}"
+                       Text="Edit Task" />
+        </StackPanel>
 
         <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto Auto Auto Auto Auto Auto Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
@@ -91,6 +98,10 @@
             <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}"
                     Classes="secondary" />
             <Button Content="Save" Command="{Binding SaveNewTaskCommand}"
+                    IsVisible="{Binding !IsEditing}"
+                    IsDefault="True" />
+            <Button Content="Update" Command="{Binding SaveNewTaskCommand}"
+                    IsVisible="{Binding IsEditing}"
                     IsDefault="True" />
         </StackPanel>
     </StackPanel>

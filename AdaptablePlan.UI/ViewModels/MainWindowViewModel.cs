@@ -1,21 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
 using AdaptablePlan.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 
 namespace AdaptablePlan.UI.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IAdaptablePlanDb? _db;
-    private readonly DbType _dbType;
 
     // --- Default (seed) data ---
     private static readonly ScheduleEntry[] DefaultSchedule =
@@ -40,12 +38,14 @@ public partial class MainWindowViewModel : ViewModelBase
             DaysOfWeek = new HashSet<DayOfWeek>(days),
         };
 
-    private static IEnumerable<TaskTemplate> DefaultTaskTemplates()
+    private static List<TaskTemplate> DefaultTaskTemplates()
     {
-        yield return MakeDefaultTask(0, "DEFAULT — DB not loaded", TaskType.Recurring, "09:00", "09:30", [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday]);
-        yield return MakeDefaultTask(1, "Morning standup", TaskType.FixedTime, "09:00", "09:15", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]);
-        yield return MakeDefaultTask(2, "Deep work block", TaskType.Recurring, "10:00", "12:00", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday]);
-        yield return MakeDefaultTask(3, "Lunch break", TaskType.FixedTime, "12:30", "13:00", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]);
+        return
+        [
+            MakeDefaultTask(0, "Morning standup", TaskType.FixedTime, "09:00", "09:15", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]),
+            MakeDefaultTask(1, "Deep work block", TaskType.Recurring, "10:00", "12:00", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday]),
+            MakeDefaultTask(2, "Lunch break", TaskType.FixedTime, "12:30", "13:00", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]),
+        ];
     }
 
     public ObservableCollection<ScheduleEntry> Schedule { get; } = new();
@@ -53,7 +53,28 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<TaskTemplate> OneTimeTasks { get; } = new();
 
     [ObservableProperty]
+    private ScheduleEntry? _selectedEntry;
+
+    [ObservableProperty]
+    private bool _isEditingEntry;
+
+    [ObservableProperty]
+    private string _editEntryActivity = string.Empty;
+
+    [ObservableProperty]
+    private string _editEntryStartTime = string.Empty;
+
+    [ObservableProperty]
+    private string _editEntryEndTime = string.Empty;
+
+    [ObservableProperty]
     private bool _isNewTaskOpen;
+
+    [ObservableProperty]
+    private bool _isEditing;
+
+    [ObservableProperty]
+    private TaskTemplate? _selectedTask;
 
     [ObservableProperty]
     private TaskTemplate _currentTask = new();
@@ -89,27 +110,21 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _appStatus = "Loading...";
 
-    public string DayStartedText => _dayStarted ? "End Day" : "Start Day";
+    public string DayStartedText => DayStarted ? "End Day" : "Start Day";
 
-    // ---------------------------------------------------------------------------
-    //  Parameterless constructor — used by ViewModelLocator / design-time
-    // ---------------------------------------------------------------------------
+    // --- Constructor no DB ---
     public MainWindowViewModel()
     {
         InitCommon();
-        LoadDefaultData("⚠ Default data — database not connected");
+        LoadDefaultData("Default data — no database");
     }
 
-    // ---------------------------------------------------------------------------
-    //  Constructor with DB — used by DI
-    // ---------------------------------------------------------------------------
+    // --- Constructor with DB ---
     public MainWindowViewModel(IAdaptablePlanDb db, DbType dbType)
     {
         _db = db;
-        _dbType = dbType;
-
         InitCommon();
-        _ = LoadFromDbAsync();
+        LoadFromDb(db, dbType);
     }
 
     private void InitCommon()
@@ -117,7 +132,6 @@ public partial class MainWindowViewModel : ViewModelBase
         var days = Enum.GetValues<DayOfWeek>();
         foreach (var day in days)
             DaysOfWeekSelection[day] = false;
-
         SyncTaskTypeFlags();
         CurrentTask.PropertyChanged += OnCurrentTaskPropertyChanged;
         PropertyChanged += OnViewModelPropertyChanged;
@@ -149,39 +163,39 @@ public partial class MainWindowViewModel : ViewModelBase
         IsRecurringOrThings = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
     }
 
-    // ---------------------------------------------------------------------------
-    //  DB loading / seeding
-    // ---------------------------------------------------------------------------
-    private async Task LoadFromDbAsync()
+    // --- DB load (sync) ---
+    private void LoadFromDb(IAdaptablePlanDb db, DbType dbType)
     {
         try
         {
-            var (templates, schedule) = await ReadAllAsync(_db!, _dbType);
+            var templates = db.TaskTemplates.GetAllAsync().GetAwaiter().GetResult();
+            var schedule = db.ScheduleEntries.GetAllAsync().GetAwaiter().GetResult();
 
-            // If DB is empty, seed it with defaults
+            // first run — seed
             if (!templates.Any() && !schedule.Any())
             {
-                await SeedDbAsync(_db!, DefaultTaskTemplates(), DefaultSchedule);
+                var defaultTasks = DefaultTaskTemplates();
+                foreach (var t in defaultTasks)
+                    db.TaskTemplates.InsertAsync(t).GetAwaiter().GetResult();
+                foreach (var s in DefaultSchedule)
+                    db.ScheduleEntries.InsertAsync(s).GetAwaiter().GetResult();
 
-                templates = DefaultTaskTemplates().ToList();
+                templates = defaultTasks;
                 schedule = DefaultSchedule;
             }
 
-            // Load into UI collections
             foreach (var s in schedule)
                 Schedule.Add(s);
-
             foreach (var t in templates)
                 TaskTemplates.Add(t);
 
             AppStatus = templates.Any()
-                ? $"✓ Data loaded from {_dbType}"
-                : $"✓ {_dbType} ready (seeded with defaults)";
+                ? $"Data loaded from {dbType}"
+                : $"{dbType} ready (seeded)";
         }
         catch
         {
-            // DB unavailable — fall back to hardcoded defaults
-            LoadDefaultData("⚠ Default data — database not connected");
+            LoadDefaultData("Default data — database error");
         }
     }
 
@@ -189,35 +203,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         foreach (var s in DefaultSchedule)
             Schedule.Add(s);
-
-        var defaults = DefaultTaskTemplates().ToList();
-        foreach (var t in defaults)
+        foreach (var t in DefaultTaskTemplates())
             TaskTemplates.Add(t);
-
         AppStatus = statusText;
     }
 
-    // ---------------------------------------------------------------------------
-    //  Static helpers — read / seed
-    // ---------------------------------------------------------------------------
-    public static async Task<(IReadOnlyList<TaskTemplate> templates, IReadOnlyList<ScheduleEntry> schedule)> ReadAllAsync(IAdaptablePlanDb db, DbType type)
-    {
-        var templates = await db.TaskTemplates.GetAllAsync();
-        var schedule = await db.ScheduleEntries.GetAllAsync();
-        return (templates, schedule);
-    }
-
-    public static async Task SeedDbAsync(IAdaptablePlanDb db, IEnumerable<TaskTemplate> templates, IEnumerable<ScheduleEntry> schedule)
-    {
-        foreach (var t in templates)
-            await db.TaskTemplates.InsertAsync(t);
-        foreach (var s in schedule)
-            await db.ScheduleEntries.InsertAsync(s);
-    }
-
-    // ---------------------------------------------------------------------------
-    //  Commands
-    // ---------------------------------------------------------------------------
+    // --- Commands ---
     [RelayCommand]
     private void OpenNewTask()
     {
@@ -225,25 +216,95 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentTask.Type = TaskType.Recurring;
         foreach (var day in DaysOfWeekSelection.Keys)
             DaysOfWeekSelection[day] = false;
+        IsEditing = false;
         IsNewTaskOpen = true;
     }
 
     [RelayCommand]
-    private void OnTaskTypeChanged(TaskType type)
-    {
-        foreach (var day in DaysOfWeekSelection.Keys)
-            DaysOfWeekSelection[day] = false;
-    }
-
-    [RelayCommand]
-    private async Task SaveNewTask()
+    private void SaveNewTask()
     {
         if (string.IsNullOrWhiteSpace(CurrentTask.Name))
             return;
 
+        if (IsEditing && SelectedTask != null)
+        {
+            UpdateTask(SelectedTask);
+        }
+        else
+        {
+            InsertTask();
+        }
+
+        IsNewTaskOpen = false;
+    }
+
+    [RelayCommand]
+    private void EditTask()
+    {
+        if (SelectedTask == null)
+            return;
+
+        CurrentTask = new()
+        {
+            Name = SelectedTask.Name,
+            Type = SelectedTask.Type,
+            DurationMinutes = SelectedTask.DurationMinutes,
+            Position = SelectedTask.Position,
+            StartTime = SelectedTask.StartTime,
+            EndTime = SelectedTask.EndTime,
+            Date = SelectedTask.Date,
+        };
+
+        foreach (var day in DaysOfWeekSelection.Keys)
+            DaysOfWeekSelection[day] = SelectedTask.DaysOfWeek.Contains(day);
+
+        IsEditing = true;
+        IsNewTaskOpen = true;
+    }
+
+    [RelayCommand]
+    private void DeleteTask()
+    {
+        if (SelectedTask == null || _db == null)
+            return;
+
+        if (SelectedTask.Type == TaskType.OneTime)
+            OneTimeTasks.Remove(SelectedTask);
+        else
+            TaskTemplates.Remove(SelectedTask);
+
+        _db.TaskTemplates.DeleteAsync(SelectedTask.Id).GetAwaiter().GetResult();
+        SelectedTask = null;
+    }
+
+    private void UpdateTask(TaskTemplate task)
+    {
+        task.Name = CurrentTask.Name;
+        task.Type = CurrentTask.Type;
+        task.DurationMinutes = CurrentTask.DurationMinutes;
+        task.Position = CurrentTask.Position;
+        task.StartTime = CurrentTask.StartTime;
+        task.EndTime = CurrentTask.EndTime;
+        task.Date = CurrentTask.Date;
+
+        task.DaysOfWeek.Clear();
+        if (task.Type != TaskType.OneTime)
+        {
+            foreach (var kvp in DaysOfWeekSelection)
+                if (kvp.Value)
+                    task.DaysOfWeek.Add(kvp.Key);
+        }
+        task.DaysOfWeek = new HashSet<DayOfWeek>(task.DaysOfWeek);
+
+        if (_db != null)
+            _db.TaskTemplates.UpdateAsync(task).GetAwaiter().GetResult();
+    }
+
+    private void InsertTask()
+    {
         var task = new TaskTemplate
         {
-            Id = CurrentTask.Id != Guid.NewGuid() ? CurrentTask.Id : Guid.NewGuid(),
+            Id = Guid.NewGuid(),
             Name = CurrentTask.Name,
             Type = CurrentTask.Type,
             DurationMinutes = CurrentTask.DurationMinutes,
@@ -251,11 +312,11 @@ public partial class MainWindowViewModel : ViewModelBase
             StartTime = CurrentTask.StartTime,
             EndTime = CurrentTask.EndTime,
             Date = CurrentTask.Date,
+            DaysOfWeek = new HashSet<DayOfWeek>(),
         };
 
         if (task.Type != TaskType.OneTime)
         {
-            task.DaysOfWeek = new HashSet<DayOfWeek>();
             foreach (var kvp in DaysOfWeekSelection)
                 if (kvp.Value)
                     task.DaysOfWeek.Add(kvp.Key);
@@ -266,11 +327,49 @@ public partial class MainWindowViewModel : ViewModelBase
         else
             TaskTemplates.Add(task);
 
-        // Persist to DB
         if (_db != null)
-            await _db.TaskTemplates.InsertAsync(task);
+            _db.TaskTemplates.InsertAsync(task).GetAwaiter().GetResult();
+    }
 
-        IsNewTaskOpen = false;
+    // --- Schedule Entry commands ---
+    [RelayCommand]
+    private void EditEntry()
+    {
+        if (SelectedEntry == null)
+            return;
+        EditEntryActivity = SelectedEntry.Activity;
+        EditEntryStartTime = SelectedEntry.StartTime;
+        EditEntryEndTime = SelectedEntry.EndTime;
+        IsEditingEntry = true;
+    }
+
+    [RelayCommand]
+    private void SaveEntry()
+    {
+        if (SelectedEntry == null || string.IsNullOrWhiteSpace(EditEntryActivity))
+            return;
+        SelectedEntry.Activity = EditEntryActivity;
+        SelectedEntry.StartTime = EditEntryStartTime;
+        SelectedEntry.EndTime = EditEntryEndTime;
+        if (_db != null)
+            _db.ScheduleEntries.UpdateAsync(SelectedEntry).GetAwaiter().GetResult();
+        IsEditingEntry = false;
+    }
+
+    [RelayCommand]
+    private void CancelEditEntry()
+    {
+        IsEditingEntry = false;
+    }
+
+    [RelayCommand]
+    private void DeleteEntry()
+    {
+        if (SelectedEntry == null || _db == null)
+            return;
+        Schedule.Remove(SelectedEntry);
+        _db.ScheduleEntries.DeleteAsync(SelectedEntry.Id).GetAwaiter().GetResult();
+        SelectedEntry = null;
     }
 
     [RelayCommand]
@@ -282,14 +381,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleDay()
     {
+        DayStarted = !DayStarted;
         if (DayStarted)
-            DayStarted = false;
-        else
-        {
-            DayStarted = true;
             DayStartTime = DateTime.Now;
-        }
-
         OnPropertyChanged(nameof(DayStartedText));
     }
 
