@@ -1,11 +1,18 @@
 using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AdaptablePlan.Core.Models;
 
-public class ScheduleEntry
+public partial class ScheduleEntry : ObservableObject
 {
     public Guid Id { get; set; }
-    public string StartTime { get; set; } = string.Empty;
-    public string EndTime { get; set; } = string.Empty;
-    public string Activity { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    private string _startTime = string.Empty;
+
+    [ObservableProperty]
+    private string _endTime = string.Empty;
+
+    [ObservableProperty]
+    private string _activity = string.Empty;
 }

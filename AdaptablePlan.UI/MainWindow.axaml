@@ -14,9 +14,10 @@
     </Window.Resources>
 
     <Grid>
-        <Grid IsVisible="{Binding !IsNewTaskOpen}">
+        <Grid IsVisible="{Binding IsMainVisible}">
             <Grid Margin="16">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
@@ -28,13 +29,27 @@
                            FontWeight="SemiBold"
                            Text="{Binding AppStatus}" />
 
+                <!-- Day / Week toggle -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal"
+                            Spacing="8" Margin="0,0,0,8">
+                    <RadioButton Content="Day" IsChecked="{Binding IsDayView, Mode=TwoWay}" />
+                    <RadioButton Content="Week" IsChecked="{Binding IsWeekView, Mode=TwoWay}" />
+                    <CheckBox Content="Start week on Monday"
+                              VerticalAlignment="Center"
+                              Margin="24,0,0,0"
+                              IsChecked="{Binding StartWeekOnMonday, Mode=TwoWay}"
+                              IsVisible="{Binding IsWeekView}" />
+                </StackPanel>
+
                 <!-- Schedule list -->
-                <ListBox Grid.Row="1"
+                <ListBox Grid.Row="2"
                          ItemsSource="{Binding Schedule}"
-                         SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
+                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,2">
+                                <TextBlock Width="60" Text="{Binding DayName}"
+                                           IsVisible="{Binding $parent[Window].DataContext.IsWeekView}" />
                                 <TextBlock Width="100" Text="{Binding StartTime}" />
                                 <TextBlock Width="100" Text="{Binding EndTime}" />
                                 <TextBlock Text="{Binding Activity}" />
@@ -44,71 +59,57 @@
                 </ListBox>
 
                 <!-- Action buttons -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal"
+                <StackPanel Grid.Row="3" Orientation="Horizontal"
                             Spacing="8" Margin="0,8,0,0">
                     <Button Content="{Binding DayStartedText}"
                             Command="{Binding ToggleDayCommand}" />
                     <Button Content="Finish Task"
                             Command="{Binding FinishCurrentTaskCommand}" />
                     <Button Content="Edit" Margin="24,0,0,0"
-                            Command="{Binding EditEntryCommand}"
-                            IsEnabled="{Binding SelectedEntry, Converter={StaticResource NullToBool}}" />
+                            Command="{Binding EditTaskCommand}"
+                            IsEnabled="{Binding SelectedItem, Converter={StaticResource NullToBool}}" />
                     <Button Content="Delete"
-                            Command="{Binding DeleteEntryCommand}"
-                            IsEnabled="{Binding SelectedEntry, Converter={StaticResource NullToBool}}" />
+                            Command="{Binding DeleteTaskCommand}"
+                            IsEnabled="{Binding SelectedItem, Converter={StaticResource NullToBool}}" />
+                    <Button Content="Refresh" Margin="24,0,0,0"
+                            Command="{Binding RefreshCommand}" />
                     <Button Content="New task" Margin="24,0,0,0"
                             Command="{Binding OpenNewTaskCommand}"/>
+                    <Button Content="Settings" Margin="24,0,0,0"
+                            Command="{Binding OpenSettingsCommand}"/>
                 </StackPanel>
             </Grid>
         </Grid>
 
-        <!-- New Task form overlay -->
-        <views:NewTaskEntryView Margin="16" IsVisible="{Binding IsNewTaskOpen}" />
+        <!-- Settings -->
+        <Grid IsVisible="{Binding IsSettingsOpen}" Margin="16">
+            <StackPanel Spacing="12" VerticalAlignment="Top">
+                <TextBlock FontWeight="SemiBold" FontSize="18" Text="Settings" />
 
-        <!-- Edit Schedule Entry form overlay -->
-        <Grid IsVisible="{Binding IsEditingEntry}">
-            <Border Background="White"
-                    Margin="100"
-                    CornerRadius="8">
-                <StackPanel Margin="16" Spacing="12">
-                    <TextBlock FontWeight="SemiBold" FontSize="18" Text="Edit Task" />
+                <StackPanel Spacing="8">
+                    <TextBlock FontWeight="SemiBold" Text="Database" />
+                    <Button Content="Delete database"
+                            HorizontalAlignment="Left"
+                            Command="{Binding RequestDeleteDatabaseCommand}" />
 
-                    <Grid ColumnDefinitions="Auto, *">
-                        <TextBlock Grid.Row="0" Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0" Text="Name" />
-                        <TextBox Grid.Row="0" Grid.Column="1"
-                                 Text="{Binding EditEntryActivity}" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Margin="0,8,8,0" Text="Start" />
-                        <TextBox Grid.Row="1" Grid.Column="1"
-                                 Margin="0,8,0,0"
-                                 Text="{Binding EditEntryStartTime}"
-                                 PlaceholderText="HH:MM" />
-
-                        <TextBlock Grid.Row="2" Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Margin="0,8,8,0" Text="End" />
-                        <TextBox Grid.Row="2" Grid.Column="1"
-                                 Margin="0,8,0,0"
-                                 Text="{Binding EditEntryEndTime}"
-                                 PlaceholderText="HH:MM" />
-                    </Grid>
-
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                IsVisible="{Binding ConfirmDeleteDb}">
+                        <TextBlock Text="Delete all data? This cannot be undone."
+                                   VerticalAlignment="Center" />
+                        <Button Content="Yes, delete"
+                                Command="{Binding DeleteDatabaseCommand}" />
                         <Button Content="Cancel"
-                                Command="{Binding CancelEditEntryCommand}"
+                                Command="{Binding CancelDeleteDatabaseCommand}"
                                 Classes="secondary" />
-                        <Button Content="Save"
-                                Command="{Binding SaveEntryCommand}"
-                                IsDefault="True" />
                     </StackPanel>
                 </StackPanel>
-            </Border>
+
+                <Button Content="Close" HorizontalAlignment="Right"
+                        Command="{Binding CloseSettingsCommand}" />
+            </StackPanel>
         </Grid>
+
+        <!-- New Task / Edit Task form -->
+        <views:NewTaskEntryView Margin="16" IsVisible="{Binding IsNewTaskOpen}" />
     </Grid>
 </Window>

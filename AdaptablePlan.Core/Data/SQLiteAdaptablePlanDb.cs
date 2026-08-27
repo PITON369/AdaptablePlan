@@ -86,6 +86,17 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
         return await reader.ReadAsync(ct) ? reader.GetString(0) : null;
     }
 
+    public async Task ClearAsync(CancellationToken ct = default)
+    {
+        var conn = Connection;
+        foreach (var table in new[] { "TaskTemplates", "ScheduleEntries" })
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"DELETE FROM {table}";
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+    }
+
     internal async Task InsertRowAsync(string table, string id, string body, CancellationToken ct)
     {
         using var cmd = Connection.CreateCommand();

@@ -13,4 +13,5 @@ public interface IAdaptablePlanDb
     IRepository<ScheduleEntry> ScheduleEntries { get; }
 
     Task EnsureCreatedAsync(CancellationToken ct = default);
+    Task ClearAsync(CancellationToken ct = default);
 }

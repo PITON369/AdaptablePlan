@@ -36,6 +36,14 @@ internal sealed class MongoAdaptablePlanDb : IAdaptablePlanDb
     public Task EnsureCreatedAsync(CancellationToken ct = default)
         => Task.CompletedTask;
 
+    public async Task ClearAsync(CancellationToken ct = default)
+    {
+        await _database.GetCollection<TaskTemplate>("TaskTemplates")
+            .DeleteManyAsync(FilterDefinition<TaskTemplate>.Empty, ct);
+        await _database.GetCollection<ScheduleEntry>("ScheduleEntries")
+            .DeleteManyAsync(FilterDefinition<ScheduleEntry>.Empty, ct);
+    }
+
     private static void EnsureConventionsRegistered()
     {
         lock (_lock)
