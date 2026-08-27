@@ -22,7 +22,12 @@
                        Text="Edit Task" />
         </StackPanel>
 
-        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto Auto Auto Auto Auto Auto Auto">
+        <TextBlock Text="{Binding ValidationMessage}"
+                   Foreground="Red"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasValidationMessage}" />
+
+        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto Auto Auto Auto Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
                        Margin="0,0,8,0" Text="Type" />
             <ComboBox Grid.Row="0" Grid.Column="1"
@@ -49,46 +54,45 @@
                      IsVisible="{Binding ShowDuration}" />
 
             <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,8,8,0" Text="Position"
-                       IsVisible="{Binding IsRecurringOrThings}" />
+                       Margin="0,8,8,0" Text="Start Time"
+                       IsVisible="{Binding ShowStartTime}" />
             <TextBox Grid.Row="3" Grid.Column="1" Margin="0,8,0,0"
-                     Text="{Binding CurrentTask.Position}"
-                     IsVisible="{Binding IsRecurringOrThings}" />
+                     Text="{Binding CurrentTask.StartTime}"
+                     PlaceholderText="HH:MM"
+                     IsVisible="{Binding ShowStartTime}" />
 
             <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                         Spacing="6" Margin="0,8,0,0"
                         IsVisible="{Binding ShowDaysOfWeek}">
-                <TextBlock FontWeight="SemiBold" Text="Days of Week" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock FontWeight="SemiBold" Text="Days of Week"
+                               VerticalAlignment="Center" />
+                    <CheckBox Content="All days"
+                              VerticalAlignment="Center"
+                              IsChecked="{Binding AllDaysSelected, Mode=TwoWay}" />
+                </StackPanel>
                 <UniformGrid Rows="1" Columns="7" Margin="0,4,0,0">
                     <CheckBox Content="Mon"
-                              IsChecked="{Binding DaysOfWeekSelection[Monday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[0].IsSelected}" />
                     <CheckBox Content="Tue"
-                              IsChecked="{Binding DaysOfWeekSelection[Tuesday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[1].IsSelected}" />
                     <CheckBox Content="Wed"
-                              IsChecked="{Binding DaysOfWeekSelection[Wednesday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[2].IsSelected}" />
                     <CheckBox Content="Thu"
-                              IsChecked="{Binding DaysOfWeekSelection[Thursday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[3].IsSelected}" />
                     <CheckBox Content="Fri"
-                              IsChecked="{Binding DaysOfWeekSelection[Friday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[4].IsSelected}" />
                     <CheckBox Content="Sat"
-                              IsChecked="{Binding DaysOfWeekSelection[Saturday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[5].IsSelected}" />
                     <CheckBox Content="Sun"
-                              IsChecked="{Binding DaysOfWeekSelection[Sunday]}" />
+                              IsChecked="{Binding DaysOfWeekSelection[6].IsSelected}" />
                 </UniformGrid>
             </StackPanel>
 
             <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,8,8,0" Text="Start Time"
-                       IsVisible="{Binding IsFixedTime}" />
-            <TextBox Grid.Row="5" Grid.Column="1" Margin="0,8,0,0"
-                     Text="{Binding CurrentTask.StartTime}"
-                     PlaceholderText="HH:MM"
-                     IsVisible="{Binding IsFixedTime}" />
-
-            <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center"
                        Margin="0,8,8,0" Text="End Time"
                        IsVisible="{Binding IsFixedTime}" />
-            <TextBox Grid.Row="6" Grid.Column="1" Margin="0,8,0,0"
+            <TextBox Grid.Row="5" Grid.Column="1" Margin="0,8,0,0"
                      Text="{Binding CurrentTask.EndTime}"
                      PlaceholderText="HH:MM"
                      IsVisible="{Binding IsFixedTime}" />

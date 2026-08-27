@@ -26,9 +26,6 @@ public partial class TaskTemplate : ObservableObject
     private int _durationMinutes;
 
     [ObservableProperty]
-    private int _position;
-
-    [ObservableProperty]
     private string _startTime = string.Empty;
 
     [ObservableProperty]
