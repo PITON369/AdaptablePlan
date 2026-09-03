@@ -102,6 +102,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _validationMessage = string.Empty;
 
+    [ObservableProperty]
+    private string _durationText = string.Empty;
+
+    [ObservableProperty]
+    private TimeSpan? _startTimeValue;
+
+    [ObservableProperty]
+    private TimeSpan? _endTimeValue;
+
     public ObservableCollection<DaySelection> DaysOfWeekSelection { get; } = new();
 
     [ObservableProperty]
@@ -237,15 +246,63 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // --- Weekly schedule generation ---
     private static TimeSpan? ParseTime(string? t)
-        => TimeSpan.TryParse(t, out var ts) ? ts : null;
+        => TryParseTime(t, out var ts) ? ts : null;
 
     private static (TimeSpan? Start, TimeSpan? End) Interval(TaskTemplate t)
     {
-        if (!TimeSpan.TryParse(t.StartTime, out var start))
+        if (!TryParseTime(t.StartTime, out var start))
             return (null, null);
-        TimeSpan? end = TimeSpan.TryParse(t.EndTime, out var e) ? e : null;
+        TimeSpan? end = TryParseTime(t.EndTime, out var e) ? e : null;
         end ??= t.DurationMinutes > 0 ? start + TimeSpan.FromMinutes(t.DurationMinutes) : null;
         return (start, end);
+    }
+
+    // --- Validation ---
+    private string? ValidateTask(TaskTemplate task)
+    {
+        if (string.IsNullOrWhiteSpace(task.Name))
+            return "Enter a task name.";
+
+        if (task.Type is TaskType.Recurring or TaskType.Things)
+        {
+            if (!int.TryParse(DurationText.Trim(), out var minutes) || minutes <= 0)
+                return "Duration must be a positive whole number of minutes (e.g. 30).";
+        }
+
+        if (task.Type != TaskType.OneTime)
+        {
+            if (StartTimeValue is null)
+                return "Select a start time.";
+
+            if (task.Type == TaskType.FixedTime)
+            {
+                if (EndTimeValue is null)
+                    return "Select an end time.";
+                if (EndTimeValue <= StartTimeValue)
+                    return "End time must be later than start time.";
+            }
+        }
+
+        if (task.Type != TaskType.OneTime && !DaysOfWeekSelection.Any(s => s.IsSelected))
+            return "Select at least one day of the week.";
+
+        return null;
+    }
+
+    private static bool TryParseTime(string? text, out TimeSpan time)
+    {
+        time = default;
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+        var parts = text.Trim().Split(':');
+        if (parts.Length != 2)
+            return false;
+        if (!int.TryParse(parts[0], out var hours) || !int.TryParse(parts[1], out var minutes))
+            return false;
+        if (hours is < 0 or > 23 || minutes is < 0 or > 59)
+            return false;
+        time = new TimeSpan(hours, minutes, 0);
+        return true;
     }
 
     private void RegenerateSchedule()
@@ -288,6 +345,9 @@ public partial class MainWindowViewModel : ViewModelBase
             s.IsSelected = true;
         AllDaysSelected = true;
         ValidationMessage = string.Empty;
+        DurationText = string.Empty;
+        StartTimeValue = null;
+        EndTimeValue = null;
         IsEditing = false;
         IsNewTaskOpen = true;
     }
@@ -295,11 +355,23 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void SaveNewTask()
     {
-        if (string.IsNullOrWhiteSpace(CurrentTask.Name))
+        var error = ValidateTask(CurrentTask);
+        if (error != null)
         {
-            ValidationMessage = "Enter a task name";
+            ValidationMessage = error;
             return;
         }
+
+        CurrentTask.Name = CurrentTask.Name.Trim();
+        CurrentTask.StartTime = CurrentTask.Type == TaskType.OneTime
+            ? string.Empty
+            : StartTimeValue?.ToString(@"hh\:mm") ?? string.Empty;
+        CurrentTask.EndTime = CurrentTask.Type == TaskType.FixedTime
+            ? EndTimeValue?.ToString(@"hh\:mm") ?? string.Empty
+            : string.Empty;
+        CurrentTask.DurationMinutes = CurrentTask.Type is TaskType.Recurring or TaskType.Things
+            ? int.Parse(DurationText.Trim())
+            : 0;
 
         var conflict = FindConflict(CurrentTask, IsEditing ? SelectedTask : null);
         if (conflict != null)
@@ -334,6 +406,9 @@ public partial class MainWindowViewModel : ViewModelBase
             EndTime = SelectedTask.EndTime,
             Date = SelectedTask.Date,
         };
+        DurationText = SelectedTask.DurationMinutes.ToString();
+        StartTimeValue = ParseTime(SelectedTask.StartTime);
+        EndTimeValue = ParseTime(SelectedTask.EndTime);
 
         foreach (var s in DaysOfWeekSelection)
             s.IsSelected = SelectedTask.DaysOfWeek.Contains(s.Day);
