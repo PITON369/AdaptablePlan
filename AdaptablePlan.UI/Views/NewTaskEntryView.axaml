@@ -12,7 +12,7 @@
     <UserControl.Resources>
         <converters:TaskTypeDisplayConverter x:Key="TaskTypeDisplayConverter" />
     </UserControl.Resources>
-    <StackPanel Spacing="12">
+    <StackPanel Spacing="12" MaxWidth="480" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <TextBlock FontWeight="SemiBold" FontSize="18"
                        IsVisible="{Binding !IsEditing}"
@@ -27,11 +27,9 @@
                    TextWrapping="Wrap"
                    IsVisible="{Binding HasValidationMessage}" />
 
-        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto Auto Auto Auto Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,0,8,0" Text="Type" />
-            <ComboBox Grid.Row="0" Grid.Column="1"
-                      ItemsSource="{Binding TaskTypes}"
+        <StackPanel Spacing="4">
+            <TextBlock Text="Type" />
+            <ComboBox ItemsSource="{Binding TaskTypes}"
                       SelectedValue="{Binding CurrentTask.Type}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -39,64 +37,56 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+        </StackPanel>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,8,8,0" Text="Name" />
-            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,8,0,0"
-                     Text="{Binding CurrentTask.Name}" />
+        <StackPanel Spacing="4">
+            <TextBlock Text="Name" />
+            <TextBox Text="{Binding CurrentTask.Name}" />
+        </StackPanel>
 
-            <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,8,8,0" Text="Duration (min)"
-                       IsVisible="{Binding ShowDuration}" />
-            <TextBox Grid.Row="2" Grid.Column="1" Margin="0,8,0,0"
-                     Text="{Binding CurrentTask.DurationMinutes}"
-                     PlaceholderText="e.g. 30"
-                     IsVisible="{Binding ShowDuration}" />
+        <StackPanel Spacing="4" IsVisible="{Binding ShowDuration}">
+            <TextBlock Text="Duration (min)" />
+            <TextBox Text="{Binding DurationText}"
+                     PlaceholderText="e.g. 30" />
+        </StackPanel>
 
-            <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,8,8,0" Text="Start Time"
-                       IsVisible="{Binding ShowStartTime}" />
-            <TextBox Grid.Row="3" Grid.Column="1" Margin="0,8,0,0"
-                     Text="{Binding CurrentTask.StartTime}"
-                     PlaceholderText="HH:MM"
-                     IsVisible="{Binding ShowStartTime}" />
+        <StackPanel Spacing="4" IsVisible="{Binding ShowStartTime}">
+            <TextBlock Text="Start Time" />
+            <TimePicker SelectedTime="{Binding StartTimeValue, Mode=TwoWay}"
+                        ClockIdentifier="24HourClock" />
+        </StackPanel>
 
-            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                        Spacing="6" Margin="0,8,0,0"
-                        IsVisible="{Binding ShowDaysOfWeek}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock FontWeight="SemiBold" Text="Days of Week"
-                               VerticalAlignment="Center" />
-                    <CheckBox Content="All days"
-                              VerticalAlignment="Center"
-                              IsChecked="{Binding AllDaysSelected, Mode=TwoWay}" />
-                </StackPanel>
-                <UniformGrid Rows="1" Columns="7" Margin="0,4,0,0">
-                    <CheckBox Content="Mon"
-                              IsChecked="{Binding DaysOfWeekSelection[0].IsSelected}" />
-                    <CheckBox Content="Tue"
-                              IsChecked="{Binding DaysOfWeekSelection[1].IsSelected}" />
-                    <CheckBox Content="Wed"
-                              IsChecked="{Binding DaysOfWeekSelection[2].IsSelected}" />
-                    <CheckBox Content="Thu"
-                              IsChecked="{Binding DaysOfWeekSelection[3].IsSelected}" />
-                    <CheckBox Content="Fri"
-                              IsChecked="{Binding DaysOfWeekSelection[4].IsSelected}" />
-                    <CheckBox Content="Sat"
-                              IsChecked="{Binding DaysOfWeekSelection[5].IsSelected}" />
-                    <CheckBox Content="Sun"
-                              IsChecked="{Binding DaysOfWeekSelection[6].IsSelected}" />
-                </UniformGrid>
+        <StackPanel Spacing="6" IsVisible="{Binding ShowDaysOfWeek}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock FontWeight="SemiBold" Text="Days of Week"
+                           VerticalAlignment="Center" />
+                <CheckBox Content="All days"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding AllDaysSelected, Mode=TwoWay}" />
             </StackPanel>
+            <UniformGrid Rows="1" Columns="7" Margin="0,4,0,0">
+                <CheckBox Content="Mon"
+                          IsChecked="{Binding DaysOfWeekSelection[0].IsSelected}" />
+                <CheckBox Content="Tue"
+                          IsChecked="{Binding DaysOfWeekSelection[1].IsSelected}" />
+                <CheckBox Content="Wed"
+                          IsChecked="{Binding DaysOfWeekSelection[2].IsSelected}" />
+                <CheckBox Content="Thu"
+                          IsChecked="{Binding DaysOfWeekSelection[3].IsSelected}" />
+                <CheckBox Content="Fri"
+                          IsChecked="{Binding DaysOfWeekSelection[4].IsSelected}" />
+                <CheckBox Content="Sat"
+                          IsChecked="{Binding DaysOfWeekSelection[5].IsSelected}" />
+                <CheckBox Content="Sun"
+                          IsChecked="{Binding DaysOfWeekSelection[6].IsSelected}" />
+            </UniformGrid>
+        </StackPanel>
 
-            <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center"
-                       Margin="0,8,8,0" Text="End Time"
-                       IsVisible="{Binding IsFixedTime}" />
-            <TextBox Grid.Row="5" Grid.Column="1" Margin="0,8,0,0"
-                     Text="{Binding CurrentTask.EndTime}"
-                     PlaceholderText="HH:MM"
-                     IsVisible="{Binding IsFixedTime}" />
-        </Grid>
+        <StackPanel Spacing="4" IsVisible="{Binding IsFixedTime}">
+            <TextBlock Text="End Time" />
+            <TimePicker SelectedTime="{Binding EndTimeValue, Mode=TwoWay}"
+                        ClockIdentifier="24HourClock" />
+        </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
             <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}"
