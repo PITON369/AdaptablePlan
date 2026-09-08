@@ -41,15 +41,14 @@
                               IsVisible="{Binding IsWeekView}" />
                 </StackPanel>
 
-                <!-- Schedule list -->
+                <!-- Day view: vertical list -->
                 <ListBox Grid.Row="2"
                          ItemsSource="{Binding Schedule}"
-                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                         IsVisible="{Binding IsDayView}">
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:ScheduleItem">
                             <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,2">
-                                <TextBlock Width="60" Text="{Binding DayName}"
-                                           IsVisible="{Binding $parent[Window].DataContext.IsWeekView}" />
                                 <TextBlock Width="100" Text="{Binding StartTime}" />
                                 <TextBlock Width="100" Text="{Binding EndTime}" />
                                 <TextBlock Text="{Binding Activity}" />
@@ -57,6 +56,104 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+
+                <!-- Week view: horizontal timetable (days on top, time on the left) -->
+                <ScrollViewer Grid.Row="2"
+                              IsVisible="{Binding IsWeekView}"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Day headers -->
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="90" Padding="4,3"
+                                    Background="{DynamicResource WeekGridHeaderBackground}"
+                                    BorderBrush="{DynamicResource WeekGridLineBrush}"
+                                    BorderThickness="1,1,1,1">
+                                <TextBlock Text="Time" FontWeight="SemiBold" TextAlignment="Right" />
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding WeekDayHeaders}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:WeekDayHeader">
+                                        <Border Width="100" Padding="4,3"
+                                                Background="{DynamicResource WeekGridHeaderBackground}"
+                                                BorderBrush="{DynamicResource WeekGridLineBrush}"
+                                                BorderThickness="0,1,1,1">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       TextAlignment="Center" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Time rows -->
+                        <ItemsControl ItemsSource="{Binding WeekRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:WeekRow">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="90" Padding="4,2"
+                                                Background="{DynamicResource WeekGridTimeBackground}"
+                                                BorderBrush="{DynamicResource WeekGridLineBrush}"
+                                                BorderThickness="1,1,0,1">
+                                            <TextBlock Text="{Binding TimeLabel}" FontSize="11"
+                                                       TextAlignment="Right" TextWrapping="Wrap" />
+                                        </Border>
+                                        <ItemsControl ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:WeekCell">
+                                                    <Border Width="100" MinHeight="22" Padding="1"
+                                                            BorderBrush="{DynamicResource WeekGridLineBrush}"
+                                                            BorderThickness="0,1,1,1">
+                                                        <ItemsControl ItemsSource="{Binding Tasks}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:ScheduleItem">
+                                                                    <Button Content="{Binding Activity}"
+                                                                            FontSize="11"
+                                                                            Padding="3,1"
+                                                                            MinHeight="18"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            HorizontalContentAlignment="Left"
+                                                                            Click="OnCellButtonClick"
+                                                                            Classes.selected="{Binding IsSelected}">
+                                                                        <Button.Styles>
+                                                                            <Style Selector="Button">
+                                                                                <Setter Property="Background"
+                                                                                        Value="Transparent" />
+                                                                                <Setter Property="BorderThickness"
+                                                                                        Value="0" />
+                                                                            </Style>
+                                                                            <Style Selector="Button.selected">
+                                                                                <Setter Property="Background"
+                                                                                        Value="{DynamicResource WeekGridSelectedBackground}" />
+                                                                                <Setter Property="Foreground"
+                                                                                        Value="{DynamicResource WeekGridSelectedForeground}" />
+                                                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                                            </Style>
+                                                                        </Button.Styles>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- Action buttons -->
                 <StackPanel Grid.Row="3" Orientation="Horizontal"

@@ -41,6 +41,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<ScheduleItem> Schedule { get; } = new();
     public ObservableCollection<TaskTemplate> TaskTemplates { get; } = new();
     public ObservableCollection<TaskTemplate> OneTimeTasks { get; } = new();
+    public ObservableCollection<WeekDayHeader> WeekDayHeaders { get; } = new();
+    public ObservableCollection<WeekRow> WeekRows { get; } = new();
 
     [ObservableProperty]
     private ScheduleItem? _selectedItem;
@@ -152,8 +154,20 @@ public partial class MainWindowViewModel : ViewModelBase
         PropertyChanged += OnViewModelPropertyChanged;
     }
 
+    private ScheduleItem? _lastSelectedItem;
+
     partial void OnSelectedItemChanged(ScheduleItem? value)
-        => SelectedTask = value?.Template;
+    {
+        if (!ReferenceEquals(_lastSelectedItem, value))
+        {
+            if (_lastSelectedItem != null)
+                _lastSelectedItem.IsSelected = false;
+            _lastSelectedItem = value;
+            if (value != null)
+                value.IsSelected = true;
+        }
+        SelectedTask = value?.Template;
+    }
 
     partial void OnIsDayViewChanged(bool value) => RegenerateSchedule();
     partial void OnIsWeekViewChanged(bool value) => RegenerateSchedule();
@@ -330,10 +344,149 @@ public partial class MainWindowViewModel : ViewModelBase
         Schedule.Clear();
         foreach (var i in ordered)
             Schedule.Add(i);
+
+        BuildWeekGrid();
     }
 
     private int WeekIndex(DayOfWeek day)
         => StartWeekOnMonday ? ((int)day + 6) % 7 : (int)day;
+
+    // --- Week grid (horizontal timetable: days on top, time on the left) ---
+    private void BuildWeekGrid()
+    {
+        WeekDayHeaders.Clear();
+        WeekRows.Clear();
+
+        var dayOrder = Enumerable.Range(0, 7)
+            .Select(i => (DayOfWeek)(StartWeekOnMonday ? (i + 1) % 7 : i))
+            .ToArray();
+        foreach (var day in dayOrder)
+            WeekDayHeaders.Add(new WeekDayHeader { Name = ShortDayName(day) });
+
+        var today = DateTime.Today;
+        var weekStart = today.AddDays(-WeekIndex(today.DayOfWeek));
+        var weekEnd = weekStart.AddDays(7);
+
+        var rawByDay = new Dictionary<DayOfWeek, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>>();
+        foreach (var t in TaskTemplates)
+        {
+            var (start, end) = ResolvedInterval(t);
+            if (start == null || end == null)
+                continue;
+            foreach (var day in t.DaysOfWeek)
+                AddInterval(rawByDay, day, start.Value, end.Value, new ScheduleItem { Day = day, Template = t });
+        }
+        foreach (var t in OneTimeTasks)
+        {
+            if (t.Date is DateTime d && d.Date >= weekStart && d.Date < weekEnd)
+            {
+                var (start, end) = ResolvedInterval(t);
+                if (start == null || end == null)
+                    continue;
+                AddInterval(rawByDay, d.DayOfWeek, start.Value, end.Value, new ScheduleItem { Day = d.DayOfWeek, Template = t });
+            }
+        }
+
+        if (rawByDay.Count == 0)
+            return;
+
+        var resolvedByDay = new Dictionary<DayOfWeek, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>>();
+        foreach (var (day, tasks) in rawByDay)
+            resolvedByDay[day] = ResolveDayWraps(tasks);
+
+        var all = resolvedByDay.Values.SelectMany(x => x).ToList();
+        var min = all.Min(x => x.Start);
+        var max = all.Max(x => x.End);
+
+        var bounds = all
+            .SelectMany(x => new[] { x.Start, x.End })
+            .Where(t => t >= min && t <= max)
+            .OrderBy(t => t)
+            .Distinct()
+            .ToList();
+
+        for (int i = 0; i < bounds.Count - 1; i++)
+        {
+            var slotStart = bounds[i];
+            var slotEnd = bounds[i + 1];
+            var row = new WeekRow
+            {
+                TimeLabel = $"{FormatTime(slotStart)}-{FormatTime(slotEnd)}",
+            };
+            foreach (var day in dayOrder)
+            {
+                var cell = new WeekCell();
+                if (resolvedByDay.TryGetValue(day, out var list))
+                {
+                    foreach (var (s, e, item) in list)
+                    {
+                        if (s < slotEnd && slotStart < e && !cell.Tasks.Contains(item))
+                            cell.Tasks.Add(item);
+                    }
+                }
+                row.Cells.Add(cell);
+            }
+            WeekRows.Add(row);
+        }
+    }
+
+    // A day's tasks that run past midnight wrap: once a task starts earlier than the
+    // previous one, the day has rolled into the next one — shift everything forward 24h.
+    private static List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)> ResolveDayWraps(
+        List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)> tasks)
+    {
+        var result = new List<(TimeSpan, TimeSpan, ScheduleItem)>(tasks.Count);
+        var offset = TimeSpan.Zero;
+        TimeSpan? prevRawStart = null;
+        foreach (var (start, end, item) in tasks)
+        {
+            if (prevRawStart != null && start < prevRawStart.Value)
+                offset += TimeSpan.FromHours(24);
+            result.Add((start + offset, end + offset, item));
+            prevRawStart = start;
+        }
+        return result;
+    }
+
+    private static void AddInterval(
+        Dictionary<DayOfWeek, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>> map,
+        DayOfWeek day, TimeSpan start, TimeSpan end, ScheduleItem item)
+    {
+        if (end <= start)
+            return;
+        if (!map.TryGetValue(day, out var list))
+            map[day] = list = new List<(TimeSpan, TimeSpan, ScheduleItem)>();
+        list.Add((start, end, item));
+    }
+
+    private static (TimeSpan? Start, TimeSpan? End) ResolvedInterval(TaskTemplate t)
+    {
+        var start = ParseTime(t.StartTime);
+        if (start == null)
+            return (null, null);
+        var s = start.Value;
+        var e = ParseTime(t.EndTime);
+        if (e == null)
+            e = t.DurationMinutes > 0 ? s + TimeSpan.FromMinutes(t.DurationMinutes) : s;
+        var end = e.Value;
+        if (end <= s)
+            end = end.Add(TimeSpan.FromHours(24));
+        return (s, end);
+    }
+
+    private static string FormatTime(TimeSpan t)
+        => $"{(int)t.TotalHours % 24:00}:{t.Minutes:00}";
+
+    private static string ShortDayName(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Mon",
+        DayOfWeek.Tuesday => "Tue",
+        DayOfWeek.Wednesday => "Wed",
+        DayOfWeek.Thursday => "Thu",
+        DayOfWeek.Friday => "Fri",
+        DayOfWeek.Saturday => "Sat",
+        _ => "Sun",
+    };
 
     // --- Commands ---
     [RelayCommand]

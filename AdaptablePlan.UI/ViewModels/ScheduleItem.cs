@@ -1,12 +1,16 @@
 using AdaptablePlan.Core.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace AdaptablePlan.UI.ViewModels;
 
-public sealed class ScheduleItem
+public partial class ScheduleItem : ObservableObject
 {
     public DayOfWeek Day { get; init; }
     public TaskTemplate Template { get; init; } = new();
+
+    [ObservableProperty]
+    private bool _isSelected;
 
     public string StartTime => Template.StartTime;
     public string EndTime => Template.EndTime;
