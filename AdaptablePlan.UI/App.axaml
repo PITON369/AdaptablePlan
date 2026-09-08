@@ -7,4 +7,27 @@
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- App color scheme: neutral grays that follow the system Light/Dark theme.
+                 Referenced from the week grid via {DynamicResource ...}. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WeekGridHeaderBackground" Color="#EFEFEF" />
+                    <SolidColorBrush x:Key="WeekGridTimeBackground" Color="#F7F7F7" />
+                    <SolidColorBrush x:Key="WeekGridLineBrush" Color="#D8D8D8" />
+                    <SolidColorBrush x:Key="WeekGridSelectedBackground" Color="#2F7DE1" />
+                    <SolidColorBrush x:Key="WeekGridSelectedForeground" Color="#FFFFFF" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="WeekGridHeaderBackground" Color="#2B2B2B" />
+                    <SolidColorBrush x:Key="WeekGridTimeBackground" Color="#2E2E2E" />
+                    <SolidColorBrush x:Key="WeekGridLineBrush" Color="#4A4A4A" />
+                    <SolidColorBrush x:Key="WeekGridSelectedBackground" Color="#4C8DF6" />
+                    <SolidColorBrush x:Key="WeekGridSelectedForeground" Color="#FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>
