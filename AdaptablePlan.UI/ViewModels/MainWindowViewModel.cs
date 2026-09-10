@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Media;
 
 namespace AdaptablePlan.UI.ViewModels;
 
@@ -524,6 +525,36 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         UpdateTimeLabels();
+        UpdateColumnWidths();
+    }
+
+    // Колонка дня занимает минимум (60), но расширяется под самую длинную
+    // таску в ней. Ширина считается через реальное измерение текста.
+    private void UpdateColumnWidths()
+    {
+        for (int i = 0; i < WeekDayHeaders.Count; i++)
+        {
+            double w = 0;
+            foreach (var row in WeekRows)
+            {
+                foreach (var task in row.Cells[i].Tasks)
+                {
+                    foreach (var line in task.Activity.Split('\n'))
+                        w = Math.Max(w, MeasureText(line));
+                }
+            }
+            var width = Math.Max(60, Math.Ceiling(w) + 16);
+            WeekDayHeaders[i].ColumnWidth = width;
+            foreach (var row in WeekRows)
+                row.Cells[i].ColumnWidth = width;
+        }
+    }
+
+    private static double MeasureText(string text, double fontSize = 11)
+    {
+        var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight, new Typeface(FontFamily.Default), fontSize, Brushes.Black);
+        return ft.Width;
     }
 
     // Столбец Time подстраивается под выбранный день: строка показывает
