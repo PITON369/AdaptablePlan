@@ -13,6 +13,15 @@
         <converters:NullToBoolConverter x:Key="NullToBool" />
     </Window.Resources>
 
+    <Window.Styles>
+        <Style Selector="Border.selected">
+            <Setter Property="Background" Value="{DynamicResource WeekGridSelectedBackground}" />
+        </Style>
+        <Style Selector="Border.selected TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource WeekGridSelectedForeground}" />
+        </Style>
+    </Window.Styles>
+
     <Grid>
         <Grid IsVisible="{Binding IsMainVisible}">
             <Grid Margin="16">
@@ -82,7 +91,8 @@
                                         <Border Width="100" Padding="4,3"
                                                 Background="{DynamicResource WeekGridHeaderBackground}"
                                                 BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                                BorderThickness="0,1,1,1">
+                                                BorderThickness="0,1,1,1"
+                                                Classes.selected="{Binding IsSelected}">
                                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
                                                        TextAlignment="Center" />
                                         </Border>
@@ -162,6 +172,9 @@
                             Command="{Binding ToggleDayCommand}" />
                     <Button Content="Finish Task"
                             Command="{Binding FinishCurrentTaskCommand}" />
+                    <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
+                               FontWeight="SemiBold"
+                               Text="{Binding SelectedTimeText}" />
                     <Button Content="Edit" Margin="24,0,0,0"
                             Command="{Binding EditTaskCommand}"
                             IsEnabled="{Binding SelectedItem, Converter={StaticResource NullToBool}}" />
