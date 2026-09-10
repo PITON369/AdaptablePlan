@@ -9,11 +9,13 @@ public partial class ScheduleItem : ObservableObject
     public DayOfWeek Day { get; init; }
     public TaskTemplate Template { get; init; } = new();
 
+    // Время, разрешённое для этого дня (вариант DayTimes, покрывающий Day).
+    public string StartTime { get; init; } = string.Empty;
+    public string EndTime { get; init; } = string.Empty;
+
     [ObservableProperty]
     private bool _isSelected;
 
-    public string StartTime => Template.StartTime;
-    public string EndTime => Template.EndTime;
     public string Activity => Template.Name;
 
     public string DayName => Day switch

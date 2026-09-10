@@ -16,25 +16,71 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IAdaptablePlanDb? _db;
 
-    private static TaskTemplate MakeDefaultTask(string name, TaskType type, string start, string end, DayOfWeek[] days)
+    private static TaskTemplate MakeDefaultTask(string name, TaskType type, int durationMinutes, params TaskTimeVariant[] variants)
         => new()
         {
             Id = Guid.NewGuid(),
             Name = name,
             Type = type,
-            DurationMinutes = type is TaskType.Recurring or TaskType.Things ? 30 : 0,
-            StartTime = start,
-            EndTime = end,
-            DaysOfWeek = new HashSet<DayOfWeek>(days),
+            DurationMinutes = durationMinutes,
+            DayTimes = [.. variants],
         };
 
+    private static TaskTimeVariant Time(string start, string end, params DayOfWeek[] days)
+        => new() { StartTime = start, EndTime = end, Days = [.. days] };
+
+    // Демо-набор: все типы задач и разные сочетания дней/времён.
     private static List<TaskTemplate> DefaultTaskTemplates()
     {
+        DayOfWeek[] monFri = [DayOfWeek.Monday, DayOfWeek.Friday];
+        DayOfWeek[] tueThu = [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday];
+        DayOfWeek[] weekend = [DayOfWeek.Saturday, DayOfWeek.Sunday];
+        DayOfWeek[] weekdays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
+        DayOfWeek[] allWeek = [.. weekdays, .. weekend];
+
+        var today = DateTime.Today;
+
         return
         [
-            MakeDefaultTask("Morning standup", TaskType.FixedTime, "09:00", "09:15", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]),
-            MakeDefaultTask("Deep work block", TaskType.Recurring, "10:00", "12:00", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday]),
-            MakeDefaultTask("Lunch break", TaskType.FixedTime, "12:30", "13:00", [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday]),
+            // Одна задача — три разных времени по группам дней.
+            MakeDefaultTask("Morning standup", TaskType.FixedTime, 0,
+                Time("09:00", "09:10", monFri),
+                Time("09:00", "09:20", tueThu)),
+            MakeDefaultTask("Study session", TaskType.Recurring, 45,
+                Time("09:10", "", monFri),
+                Time("09:20", "", tueThu),
+                Time("10:00", "", weekend)),
+            // Задача на все 7 дней: будни и выходные по-разному.
+            MakeDefaultTask("Cook dinner", TaskType.FixedTime, 0,
+                Time("19:15", "19:55", monFri),
+                Time("19:00", "19:40", tueThu),
+                Time("18:00", "18:40", weekend)),
+            // На Вт–Чт пересекается со Study session (09:20-10:05) — demo: две таски в одной ячейке.
+            MakeDefaultTask("Deep work block", TaskType.Recurring, 90,
+                Time("10:30", "", monFri),
+                Time("10:00", "", tueThu)),
+            MakeDefaultTask("Lunch break", TaskType.FixedTime, 0,
+                Time("12:30", "13:00", monFri),
+                Time("12:30", "13:00", tueThu),
+                Time("13:30", "14:00", weekend)),
+            // Одна задача, дни не подряд.
+            MakeDefaultTask("Hobby hour", TaskType.Recurring, 60,
+                Time("14:00", "", DayOfWeek.Wednesday),
+                Time("15:00", "", DayOfWeek.Sunday)),
+            MakeDefaultTask("Gym workout", TaskType.Recurring, 40,
+                Time("18:30", "", monFri),
+                Time("19:45", "", tueThu)),
+            MakeDefaultTask("Evening review", TaskType.Things, 30,
+                Time("20:30", "", tueThu),
+                Time("20:00", "", weekend)),
+            // Только выходные.
+            MakeDefaultTask("Long walk", TaskType.Recurring, 60,
+                Time("11:30", "", weekend)),
+            MakeDefaultTask("Weekly planning", TaskType.FixedTime, 0,
+                Time("16:00", "16:30", DayOfWeek.Sunday)),
+            // Разовые задачи без времени (только день).
+            new TaskTemplate { Id = Guid.NewGuid(), Name = "Pay utilities", Type = TaskType.OneTime, Date = today },
+            new TaskTemplate { Id = Guid.NewGuid(), Name = "Call grandma", Type = TaskType.OneTime, Date = today.AddDays(1) },
         ];
     }
 
@@ -69,19 +115,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isRecurring;
 
     [ObservableProperty]
-    private bool _isFixedTime;
-
-    [ObservableProperty]
     private bool _isOneTime;
 
     [ObservableProperty]
-    private bool _showDaysOfWeek;
-
-    [ObservableProperty]
     private bool _showDuration;
-
-    [ObservableProperty]
-    private bool _showStartTime;
 
     [ObservableProperty]
     private bool _isRecurringOrThings;
@@ -107,18 +144,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _durationText = string.Empty;
 
-    [ObservableProperty]
-    private TimeSpan? _startTimeValue;
+    public ObservableCollection<TaskTimeVariantViewModel> TimeVariants { get; } = new();
 
     [ObservableProperty]
-    private TimeSpan? _endTimeValue;
-
-    public ObservableCollection<DaySelection> DaysOfWeekSelection { get; } = new();
+    private bool _showTimeVariants;
 
     [ObservableProperty]
-    private bool _allDaysSelected;
-
-    private bool _suppressAllDaysSync;
+    private string _selectedTimeText = string.Empty;
 
     public IEnumerable<TaskType> TaskTypes => Enum.GetValues<TaskType>();
 
@@ -147,14 +179,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void InitCommon()
     {
-        foreach (var day in Enum.GetValues<DayOfWeek>())
-            DaysOfWeekSelection.Add(new DaySelection { Day = day });
         SyncTaskTypeFlags();
         CurrentTask.PropertyChanged += OnCurrentTaskPropertyChanged;
         PropertyChanged += OnViewModelPropertyChanged;
     }
 
     private ScheduleItem? _lastSelectedItem;
+
+    // Порядок колонок сетки (индекс ячейки для каждого дня) — нужен для
+    // обновления столбца Time при выборе таски.
+    private Dictionary<DayOfWeek, int>? _dayCellIndex;
 
     partial void OnSelectedItemChanged(ScheduleItem? value)
     {
@@ -167,6 +201,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 value.IsSelected = true;
         }
         SelectedTask = value?.Template;
+        SelectedTimeText = value == null || string.IsNullOrEmpty(value.StartTime)
+            ? string.Empty
+            : $"{value.DayName} {value.StartTime}-{value.EndTime}";
+        UpdateTimeLabels();
     }
 
     partial void OnIsDayViewChanged(bool value) => RegenerateSchedule();
@@ -175,14 +213,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnIsNewTaskOpenChanged(bool value) => OnPropertyChanged(nameof(IsMainVisible));
     partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsMainVisible));
-
-    partial void OnAllDaysSelectedChanged(bool value)
-    {
-        if (_suppressAllDaysSync)
-            return;
-        foreach (var s in DaysOfWeekSelection)
-            s.IsSelected = value;
-    }
 
     partial void OnValidationMessageChanged(string value)
         => OnPropertyChanged(nameof(HasValidationMessage));
@@ -206,11 +236,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private void SyncTaskTypeFlags()
     {
         IsRecurring = CurrentTask.Type == TaskType.Recurring;
-        IsFixedTime = CurrentTask.Type == TaskType.FixedTime;
         IsOneTime = CurrentTask.Type == TaskType.OneTime;
-        ShowDaysOfWeek = CurrentTask.Type != TaskType.OneTime;
+        ShowTimeVariants = CurrentTask.Type != TaskType.OneTime;
         ShowDuration = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
-        ShowStartTime = CurrentTask.Type != TaskType.OneTime;
         IsRecurringOrThings = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
     }
 
@@ -244,8 +272,30 @@ public partial class MainWindowViewModel : ViewModelBase
         TaskTemplates.Clear();
         OneTimeTasks.Clear();
         foreach (var t in templates)
+        {
+            if (MigrateLegacyTimes(t) && _db != null)
+                _db.TaskTemplates.UpdateAsync(t).GetAwaiter().GetResult();
             (t.Type == TaskType.OneTime ? OneTimeTasks : TaskTemplates).Add(t);
+        }
         RegenerateSchedule();
+    }
+
+    // Разовая миграция задач, сохранённых до появления DayTimes: одно время
+    // и общий список дней превращаются в один вариант. Возвращает true, если меняли.
+    private static bool MigrateLegacyTimes(TaskTemplate t)
+    {
+        if (t.DayTimes.Count > 0 || string.IsNullOrEmpty(t.StartTime))
+            return false;
+        t.DayTimes.Add(new TaskTimeVariant
+        {
+            Days = new HashSet<DayOfWeek>(t.DaysOfWeek),
+            StartTime = t.StartTime,
+            EndTime = t.EndTime,
+        });
+        t.StartTime = string.Empty;
+        t.EndTime = string.Empty;
+        t.DaysOfWeek = new HashSet<DayOfWeek>();
+        return true;
     }
 
     private void LoadDefaultData(string statusText)
@@ -262,13 +312,43 @@ public partial class MainWindowViewModel : ViewModelBase
     private static TimeSpan? ParseTime(string? t)
         => TryParseTime(t, out var ts) ? ts : null;
 
-    private static (TimeSpan? Start, TimeSpan? End) Interval(TaskTemplate t)
+    // Интервал варианта: конец = EndTime либо Start + DurationMinutes.
+    private static (TimeSpan? Start, TimeSpan? End) VariantInterval(TaskTemplate t, TaskTimeVariant v)
     {
-        if (!TryParseTime(t.StartTime, out var start))
+        if (!TryParseTime(v.StartTime, out var start))
             return (null, null);
-        TimeSpan? end = TryParseTime(t.EndTime, out var e) ? e : null;
-        end ??= t.DurationMinutes > 0 ? start + TimeSpan.FromMinutes(t.DurationMinutes) : null;
-        return (start, end);
+        var end = TryParseTime(v.EndTime, out var e) ? (TimeSpan?)e
+            : t.DurationMinutes > 0 ? start + TimeSpan.FromMinutes(t.DurationMinutes) : null;
+        if (end == null)
+            return (start, null);
+        var en = end.Value;
+        if (en <= start)
+            en = en.Add(TimeSpan.FromHours(24));
+        return (start, en);
+    }
+
+    // Вариант, действующий на заданный день (нет — задача в этот день не выполняется).
+    private static TaskTimeVariant? VariantForDay(TaskTemplate t, DayOfWeek day)
+        => t.DayTimes.FirstOrDefault(v => v.Days.Contains(day));
+
+    private static (TimeSpan? Start, TimeSpan? End) IntervalForDay(TaskTemplate t, DayOfWeek day)
+    {
+        var v = VariantForDay(t, day);
+        return v == null ? (null, null) : VariantInterval(t, v);
+    }
+
+    private static ScheduleItem? CreateItem(TaskTemplate t, DayOfWeek day)
+    {
+        var (start, end) = IntervalForDay(t, day);
+        if (start == null || end == null)
+            return null;
+        return new ScheduleItem
+        {
+            Day = day,
+            Template = t,
+            StartTime = FormatTime(start.Value),
+            EndTime = FormatTime(end.Value),
+        };
     }
 
     // --- Validation ---
@@ -285,20 +365,24 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (task.Type != TaskType.OneTime)
         {
-            if (StartTimeValue is null)
-                return "Select a start time.";
+            if (TimeVariants.Count == 0)
+                return "Add at least one time (days + start).";
 
-            if (task.Type == TaskType.FixedTime)
+            foreach (var v in TimeVariants)
             {
-                if (EndTimeValue is null)
-                    return "Select an end time.";
-                if (EndTimeValue <= StartTimeValue)
-                    return "End time must be later than start time.";
+                if (v.StartValue is null)
+                    return "Select a start time for every time slot.";
+                if (task.Type == TaskType.FixedTime)
+                {
+                    if (v.EndValue is null)
+                        return "Select an end time for every time slot.";
+                    if (v.EndValue <= v.StartValue)
+                        return "End time must be later than start time.";
+                }
+                if (!v.HasAnyDay)
+                    return "Select at least one day for every time slot.";
             }
         }
-
-        if (task.Type != TaskType.OneTime && !DaysOfWeekSelection.Any(s => s.IsSelected))
-            return "Select at least one day of the week.";
 
         return null;
     }
@@ -327,8 +411,11 @@ public partial class MainWindowViewModel : ViewModelBase
         var items = new List<ScheduleItem>();
         foreach (var t in TaskTemplates)
         {
-            foreach (var day in t.DaysOfWeek)
-                items.Add(new ScheduleItem { Day = day, Template = t });
+            foreach (var day in Enum.GetValues<DayOfWeek>())
+            {
+                if (VariantForDay(t, day) != null)
+                    items.Add(CreateItem(t, day) ?? new ScheduleItem { Day = day, Template = t });
+            }
         }
         foreach (var t in OneTimeTasks)
         {
@@ -361,7 +448,9 @@ public partial class MainWindowViewModel : ViewModelBase
             .Select(i => (DayOfWeek)(StartWeekOnMonday ? (i + 1) % 7 : i))
             .ToArray();
         foreach (var day in dayOrder)
-            WeekDayHeaders.Add(new WeekDayHeader { Name = ShortDayName(day) });
+            WeekDayHeaders.Add(new WeekDayHeader { Name = ShortDayName(day), Day = day });
+        _dayCellIndex = dayOrder.Select((d, i) => (Day: d, Index: i))
+            .ToDictionary(x => x.Day, x => x.Index);
 
         var today = DateTime.Today;
         var weekStart = today.AddDays(-WeekIndex(today.DayOfWeek));
@@ -370,20 +459,22 @@ public partial class MainWindowViewModel : ViewModelBase
         var rawByDay = new Dictionary<DayOfWeek, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>>();
         foreach (var t in TaskTemplates)
         {
-            var (start, end) = ResolvedInterval(t);
-            if (start == null || end == null)
-                continue;
-            foreach (var day in t.DaysOfWeek)
-                AddInterval(rawByDay, day, start.Value, end.Value, new ScheduleItem { Day = day, Template = t });
+            foreach (var day in Enum.GetValues<DayOfWeek>())
+            {
+                var (start, end) = IntervalForDay(t, day);
+                if (start == null || end == null)
+                    continue;
+                AddInterval(rawByDay, day, start.Value, end.Value, CreateItem(t, day)!);
+            }
         }
         foreach (var t in OneTimeTasks)
         {
             if (t.Date is DateTime d && d.Date >= weekStart && d.Date < weekEnd)
             {
-                var (start, end) = ResolvedInterval(t);
+                var (start, end) = IntervalForDay(t, d.DayOfWeek);
                 if (start == null || end == null)
                     continue;
-                AddInterval(rawByDay, d.DayOfWeek, start.Value, end.Value, new ScheduleItem { Day = d.DayOfWeek, Template = t });
+                AddInterval(rawByDay, d.DayOfWeek, start.Value, end.Value, CreateItem(t, d.DayOfWeek)!);
             }
         }
 
@@ -392,7 +483,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var resolvedByDay = new Dictionary<DayOfWeek, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>>();
         foreach (var (day, tasks) in rawByDay)
-            resolvedByDay[day] = ResolveDayWraps(tasks);
+            // ResolveDayWraps ищет перенос через полночь по порядку начала — задачи
+            // должны идти по времени, иначе переносится всё, что идёт не по порядку.
+            resolvedByDay[day] = ResolveDayWraps(tasks.OrderBy(x => x.Start).ThenBy(x => x.End).ToList());
 
         var all = resolvedByDay.Values.SelectMany(x => x).ToList();
         var min = all.Min(x => x.Start);
@@ -412,6 +505,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var row = new WeekRow
             {
                 TimeLabel = $"{FormatTime(slotStart)}-{FormatTime(slotEnd)}",
+                DefaultLabel = $"{FormatTime(slotStart)}-{FormatTime(slotEnd)}",
             };
             foreach (var day in dayOrder)
             {
@@ -427,6 +521,37 @@ public partial class MainWindowViewModel : ViewModelBase
                 row.Cells.Add(cell);
             }
             WeekRows.Add(row);
+        }
+
+        UpdateTimeLabels();
+    }
+
+    // Столбец Time подстраивается под выбранный день: строка показывает
+    // времена тасок этого дня, а если в этот день на строке ничего нет — пусто.
+    // Без выбранной таски — общие интервалы строки по всем дням.
+    private void UpdateTimeLabels()
+    {
+        var day = SelectedItem?.Day;
+        var useDay = day != null
+            && _dayCellIndex != null
+            && _dayCellIndex.ContainsKey(day.Value)
+            && !string.IsNullOrEmpty(SelectedItem!.StartTime);
+
+        foreach (var header in WeekDayHeaders)
+            header.IsSelected = useDay && header.Day == day;
+
+        foreach (var row in WeekRows)
+        {
+            if (!useDay)
+            {
+                row.TimeLabel = row.DefaultLabel;
+                continue;
+            }
+
+            var cell = row.Cells[_dayCellIndex![day!.Value]];
+            row.TimeLabel = string.Join("+", cell.Tasks
+                .Select(t => $"{t.StartTime}-{t.EndTime}")
+                .Distinct());
         }
     }
 
@@ -459,21 +584,6 @@ public partial class MainWindowViewModel : ViewModelBase
         list.Add((start, end, item));
     }
 
-    private static (TimeSpan? Start, TimeSpan? End) ResolvedInterval(TaskTemplate t)
-    {
-        var start = ParseTime(t.StartTime);
-        if (start == null)
-            return (null, null);
-        var s = start.Value;
-        var e = ParseTime(t.EndTime);
-        if (e == null)
-            e = t.DurationMinutes > 0 ? s + TimeSpan.FromMinutes(t.DurationMinutes) : s;
-        var end = e.Value;
-        if (end <= s)
-            end = end.Add(TimeSpan.FromHours(24));
-        return (s, end);
-    }
-
     private static string FormatTime(TimeSpan t)
         => $"{(int)t.TotalHours % 24:00}:{t.Minutes:00}";
 
@@ -490,17 +600,20 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // --- Commands ---
     [RelayCommand]
+    private void AddTimeVariant() => TimeVariants.Add(new TaskTimeVariantViewModel());
+
+    [RelayCommand]
+    private void RemoveTimeVariant(TaskTimeVariantViewModel variant) => TimeVariants.Remove(variant);
+
+    [RelayCommand]
     private void OpenNewTask()
     {
         CurrentTask = new();
         CurrentTask.Type = TaskType.Recurring;
-        foreach (var s in DaysOfWeekSelection)
-            s.IsSelected = true;
-        AllDaysSelected = true;
         ValidationMessage = string.Empty;
         DurationText = string.Empty;
-        StartTimeValue = null;
-        EndTimeValue = null;
+        TimeVariants.Clear();
+        TimeVariants.Add(new TaskTimeVariantViewModel());
         IsEditing = false;
         IsNewTaskOpen = true;
     }
@@ -516,20 +629,17 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         CurrentTask.Name = CurrentTask.Name.Trim();
-        CurrentTask.StartTime = CurrentTask.Type == TaskType.OneTime
-            ? string.Empty
-            : StartTimeValue?.ToString(@"hh\:mm") ?? string.Empty;
-        CurrentTask.EndTime = CurrentTask.Type == TaskType.FixedTime
-            ? EndTimeValue?.ToString(@"hh\:mm") ?? string.Empty
-            : string.Empty;
         CurrentTask.DurationMinutes = CurrentTask.Type is TaskType.Recurring or TaskType.Things
             ? int.Parse(DurationText.Trim())
             : 0;
+        CurrentTask.DayTimes = CurrentTask.Type == TaskType.OneTime
+            ? new List<TaskTimeVariant>()
+            : TimeVariants.Select(v => v.ToModel()).ToList();
 
         var conflict = FindConflict(CurrentTask, IsEditing ? SelectedTask : null);
         if (conflict != null)
         {
-            ValidationMessage = $"Time overlaps with '{conflict.Name}' at {conflict.StartTime}";
+            ValidationMessage = conflict;
             return;
         }
 
@@ -555,19 +665,12 @@ public partial class MainWindowViewModel : ViewModelBase
             Name = SelectedTask.Name,
             Type = SelectedTask.Type,
             DurationMinutes = SelectedTask.DurationMinutes,
-            StartTime = SelectedTask.StartTime,
-            EndTime = SelectedTask.EndTime,
             Date = SelectedTask.Date,
         };
         DurationText = SelectedTask.DurationMinutes.ToString();
-        StartTimeValue = ParseTime(SelectedTask.StartTime);
-        EndTimeValue = ParseTime(SelectedTask.EndTime);
-
-        foreach (var s in DaysOfWeekSelection)
-            s.IsSelected = SelectedTask.DaysOfWeek.Contains(s.Day);
-        _suppressAllDaysSync = true;
-        AllDaysSelected = DaysOfWeekSelection.All(s => s.IsSelected);
-        _suppressAllDaysSync = false;
+        TimeVariants.Clear();
+        foreach (var v in SelectedTask.DayTimes)
+            TimeVariants.Add(TaskTimeVariantViewModel.FromModel(v));
 
         ValidationMessage = string.Empty;
         IsEditing = true;
@@ -596,18 +699,8 @@ public partial class MainWindowViewModel : ViewModelBase
         task.Name = CurrentTask.Name;
         task.Type = CurrentTask.Type;
         task.DurationMinutes = CurrentTask.DurationMinutes;
-        task.StartTime = CurrentTask.StartTime;
-        task.EndTime = CurrentTask.EndTime;
         task.Date = CurrentTask.Date;
-
-        task.DaysOfWeek.Clear();
-        if (task.Type != TaskType.OneTime)
-        {
-            foreach (var s in DaysOfWeekSelection)
-                if (s.IsSelected)
-                    task.DaysOfWeek.Add(s.Day);
-        }
-        task.DaysOfWeek = new HashSet<DayOfWeek>(task.DaysOfWeek);
+        task.DayTimes = CurrentTask.DayTimes.ToList();
 
         if (_db != null)
             _db.TaskTemplates.UpdateAsync(task).GetAwaiter().GetResult();
@@ -621,18 +714,9 @@ public partial class MainWindowViewModel : ViewModelBase
             Name = CurrentTask.Name,
             Type = CurrentTask.Type,
             DurationMinutes = CurrentTask.DurationMinutes,
-            StartTime = CurrentTask.StartTime,
-            EndTime = CurrentTask.EndTime,
             Date = CurrentTask.Date,
-            DaysOfWeek = new HashSet<DayOfWeek>(),
+            DayTimes = CurrentTask.DayTimes.ToList(),
         };
-
-        if (task.Type != TaskType.OneTime)
-        {
-            foreach (var s in DaysOfWeekSelection)
-                if (s.IsSelected)
-                    task.DaysOfWeek.Add(s.Day);
-        }
 
         if (task.Type == TaskType.OneTime)
             OneTimeTasks.Add(task);
@@ -643,31 +727,26 @@ public partial class MainWindowViewModel : ViewModelBase
             _db.TaskTemplates.InsertAsync(task).GetAwaiter().GetResult();
     }
 
-    private TaskTemplate? FindConflict(TaskTemplate candidate, TaskTemplate? exclude)
+    private string? FindConflict(TaskTemplate candidate, TaskTemplate? exclude)
     {
         foreach (var t in TaskTemplates.Concat(OneTimeTasks))
         {
             if (ReferenceEquals(t, exclude))
                 continue;
-
-            bool sharedDays;
-            if (candidate.Type == TaskType.OneTime && t.Type == TaskType.OneTime)
-                sharedDays = candidate.Date.HasValue && candidate.Date.Value.Date == t.Date?.Date;
-            else if (candidate.Type != TaskType.OneTime && t.Type != TaskType.OneTime)
-                sharedDays = candidate.DaysOfWeek.Overlaps(t.DaysOfWeek);
-            else
-                sharedDays = false;
-
-            if (!sharedDays)
+            // У задач OneTime времени нет — конфликт по времени не проверить.
+            if (candidate.Type == TaskType.OneTime || t.Type == TaskType.OneTime)
                 continue;
 
-            var (cs, ce) = Interval(candidate);
-            var (ts, te) = Interval(t);
-            if (cs == null || ce == null || ts == null || te == null)
-                continue;
+            foreach (var day in Enum.GetValues<DayOfWeek>())
+            {
+                var (cs, ce) = IntervalForDay(candidate, day);
+                var (ts, te) = IntervalForDay(t, day);
+                if (cs == null || ce == null || ts == null || te == null)
+                    continue;
 
-            if (cs.Value < te.Value && ts.Value < ce.Value)
-                return t;
+                if (cs.Value < te.Value && ts.Value < ce.Value)
+                    return $"Time overlaps with '{t.Name}' on {ShortDayName(day)} {FormatTime(ts.Value)}";
+            }
         }
         return null;
     }

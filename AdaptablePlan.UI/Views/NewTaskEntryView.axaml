@@ -50,42 +50,43 @@
                      PlaceholderText="e.g. 30" />
         </StackPanel>
 
-        <StackPanel Spacing="4" IsVisible="{Binding ShowStartTime}">
-            <TextBlock Text="Start Time" />
-            <TimePicker SelectedTime="{Binding StartTimeValue, Mode=TwoWay}"
-                        ClockIdentifier="24HourClock" />
-        </StackPanel>
-
-        <StackPanel Spacing="6" IsVisible="{Binding ShowDaysOfWeek}">
+        <StackPanel Spacing="6" IsVisible="{Binding ShowTimeVariants}">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock FontWeight="SemiBold" Text="Days of Week"
+                <TextBlock FontWeight="SemiBold" Text="Times"
                            VerticalAlignment="Center" />
-                <CheckBox Content="All days"
-                          VerticalAlignment="Center"
-                          IsChecked="{Binding AllDaysSelected, Mode=TwoWay}" />
+                <Button Content="Add time"
+                        Command="{Binding AddTimeVariantCommand}"
+                        Classes="secondary" />
             </StackPanel>
-            <UniformGrid Rows="1" Columns="7" Margin="0,4,0,0">
-                <CheckBox Content="Mon"
-                          IsChecked="{Binding DaysOfWeekSelection[0].IsSelected}" />
-                <CheckBox Content="Tue"
-                          IsChecked="{Binding DaysOfWeekSelection[1].IsSelected}" />
-                <CheckBox Content="Wed"
-                          IsChecked="{Binding DaysOfWeekSelection[2].IsSelected}" />
-                <CheckBox Content="Thu"
-                          IsChecked="{Binding DaysOfWeekSelection[3].IsSelected}" />
-                <CheckBox Content="Fri"
-                          IsChecked="{Binding DaysOfWeekSelection[4].IsSelected}" />
-                <CheckBox Content="Sat"
-                          IsChecked="{Binding DaysOfWeekSelection[5].IsSelected}" />
-                <CheckBox Content="Sun"
-                          IsChecked="{Binding DaysOfWeekSelection[6].IsSelected}" />
-            </UniformGrid>
-        </StackPanel>
-
-        <StackPanel Spacing="4" IsVisible="{Binding IsFixedTime}">
-            <TextBlock Text="End Time" />
-            <TimePicker SelectedTime="{Binding EndTimeValue, Mode=TwoWay}"
-                        ClockIdentifier="24HourClock" />
+            <ItemsControl ItemsSource="{Binding TimeVariants}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TaskTimeVariantViewModel">
+                        <StackPanel Spacing="2" Margin="0,0,0,4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="Start" VerticalAlignment="Center" />
+                                <TimePicker SelectedTime="{Binding StartValue, Mode=TwoWay}"
+                                            ClockIdentifier="24HourClock" />
+                                <TextBlock Text="End" VerticalAlignment="Center" />
+                                <TimePicker SelectedTime="{Binding EndValue, Mode=TwoWay}"
+                                            ClockIdentifier="24HourClock" />
+                                <Button Content="Remove"
+                                        Classes="secondary"
+                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTimeVariantCommand}"
+                                        CommandParameter="{Binding}" />
+                            </StackPanel>
+                            <UniformGrid Rows="1" Columns="7" Margin="0,2,0,0">
+                                <CheckBox Content="Mon" IsChecked="{Binding Mon}" />
+                                <CheckBox Content="Tue" IsChecked="{Binding Tue}" />
+                                <CheckBox Content="Wed" IsChecked="{Binding Wed}" />
+                                <CheckBox Content="Thu" IsChecked="{Binding Thu}" />
+                                <CheckBox Content="Fri" IsChecked="{Binding Fri}" />
+                                <CheckBox Content="Sat" IsChecked="{Binding Sat}" />
+                                <CheckBox Content="Sun" IsChecked="{Binding Sun}" />
+                            </UniformGrid>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
