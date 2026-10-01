@@ -3,6 +3,7 @@ using AdaptablePlan.Core.Settings;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using System;
 using System.Threading;
@@ -56,6 +57,10 @@ internal sealed class MongoAdaptablePlanDb : IAdaptablePlanDb
                 new EnumRepresentationConvention(BsonType.Int32),
             };
             ConventionRegistry.Register("app_conventions", pack, _ => true);
+
+            // Драйвер 3.x по умолчанию десериализует Guid с GuidRepresentation.Unspecified,
+            // что бросает исключение при чтении. Явно задаём Standard (BsonBinaryData subtype 04).
+            BsonSerializer.RegisterSerializer(typeof(Guid), new GuidSerializer(GuidRepresentation.Standard));
 
             _conventionsRegistered = true;
         }

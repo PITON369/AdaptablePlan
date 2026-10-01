@@ -16,6 +16,7 @@ namespace AdaptablePlan.UI.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IAdaptablePlanDb? _db;
+    private string _sqlitePath = string.Empty;
 
     private static TaskTemplate MakeDefaultTask(string name, TaskType type, int durationMinutes, params TaskTimeVariant[] variants)
         => new()
@@ -158,6 +159,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _appStatus = "Loading...";
 
+    // Сервер БД недоступен, но данные загружены из локальной SQLite-копии —
+    // жёлтый баннер на весь верх окна.
+    [ObservableProperty]
+    private bool _isServerDown;
+
+    // Данных нет ни на сервере, ни в локальной копии — показаны дефолтные
+    // данные, красный баннер.
+    [ObservableProperty]
+    private bool _isDatabaseError;
+
+    [ObservableProperty]
+    private string _dbBannerText = string.Empty;
+
     public string DayStartedText => DayStarted ? "End Day" : "Start Day";
 
     public bool HasValidationMessage => !string.IsNullOrEmpty(ValidationMessage);
@@ -171,9 +185,10 @@ public partial class MainWindowViewModel : ViewModelBase
         LoadDefaultData("Default data — no database");
     }
 
-    public MainWindowViewModel(IAdaptablePlanDb db, DbType dbType)
+    public MainWindowViewModel(IAdaptablePlanDb db, DbType dbType, SqliteDbSettings sqliteSettings)
     {
         _db = db;
+        _sqlitePath = sqliteSettings.DatabasePath;
         InitCommon();
         LoadFromDb(db, dbType);
     }
@@ -244,6 +259,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     // --- DB load (sync) ---
+    // Каскад: серверная БД → локальная SQLite-копия → дефолтные данные.
     private void LoadFromDb(IAdaptablePlanDb db, DbType dbType)
     {
         try
@@ -260,11 +276,38 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             LoadTemplates(templates);
-            AppStatus = $"Data loaded from {dbType}";
+            IsServerDown = false;
+            IsDatabaseError = false;
+            AppStatus = dbType == DbType.Sqlite
+                ? "Data loaded from local database"
+                : "Data loaded from server database";
         }
         catch
         {
-            LoadDefaultData("Default data — database error");
+            try
+            {
+                var backup = SqliteBackup.LoadFromSqliteAsync(_sqlitePath).GetAwaiter().GetResult();
+                if (backup != null)
+                {
+                    LoadTemplates(backup.Value.Templates);
+                    IsServerDown = true;
+                    IsDatabaseError = false;
+                    var stamp = SqliteBackup.ReadLastBackupDate(_sqlitePath);
+                    var from = string.IsNullOrEmpty(stamp) ? "" : $" (backup from {stamp})";
+                    DbBannerText =
+                        $"Database server unreachable — using local backup copy{from}. Changes are NOT saved!";
+                    AppStatus = "Data loaded from local backup (server unavailable)";
+                    return;
+                }
+            }
+            catch
+            {
+                // локальная копия тоже недоступна — падаем в дефолтные данные
+            }
+
+            IsDatabaseError = true;
+            DbBannerText = "No database available — showing default data. Changes are NOT saved!";
+            LoadDefaultData("Default data — no database available");
         }
     }
 
