@@ -38,11 +38,16 @@ class Program
         var mongoConnectionString = configuration["MongoDb:ConnectionString"] ?? string.Empty;
         var mongoDatabaseName = configuration["MongoDb:DatabaseName"] ?? string.Empty;
 
+        var sqlitePath = configuration["Sqlite:DatabasePath"]
+            ?? Path.Combine(AppContext.BaseDirectory, "adaptable_plan.db");
+
         services.AddSingleton(new MongoDbSettings
         {
             ConnectionString = mongoConnectionString,
             DatabaseName = mongoDatabaseName,
         });
+
+        services.AddSingleton(new SqliteDbSettings { DatabasePath = sqlitePath });
 
         services.AddSingleton(typeof(DbType), dbType);
 
@@ -54,8 +59,6 @@ class Program
 
             case DbType.Sqlite:
             default:
-                var sqlitePath = configuration["Sqlite:DatabasePath"]
-                    ?? Path.Combine(AppContext.BaseDirectory, "adaptable_plan.db");
                 services.AddSingleton<IAdaptablePlanDb>(sp => new SQLiteAdaptablePlanDb(sqlitePath));
                 break;
         }
@@ -70,6 +73,19 @@ class Program
         // Initialize DB (creates SQLite file/tables; no-op for MongoDB)
         var db = Services.GetRequiredService<IAdaptablePlanDb>();
         db.EnsureCreatedAsync().GetAwaiter().GetResult();
+
+        // Daily backup of server data into local SQLite (skipped if already done today)
+        if (dbType == DbType.MongoDb)
+        {
+            try
+            {
+                SqliteBackup.BackupTodayAsync(db, sqlitePath).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // сервер недоступен — бэкап пропускаем, приложение продолжает работать
+            }
+        }
 
         // [TEST] Comment out to simulate "no DB" fallback
         ViewModelLocator.Initialize(Services);

@@ -19,6 +19,10 @@
                     <SolidColorBrush x:Key="WeekGridLineBrush" Color="#D8D8D8" />
                     <SolidColorBrush x:Key="WeekGridSelectedBackground" Color="#2F7DE1" />
                     <SolidColorBrush x:Key="WeekGridSelectedForeground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="DbErrorBannerBackground" Color="#B3261E" />
+                    <SolidColorBrush x:Key="DbErrorBannerForeground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="DbBackupBannerBackground" Color="#F9A825" />
+                    <SolidColorBrush x:Key="DbBackupBannerForeground" Color="#212121" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="WeekGridHeaderBackground" Color="#2B2B2B" />
@@ -26,6 +30,10 @@
                     <SolidColorBrush x:Key="WeekGridLineBrush" Color="#4A4A4A" />
                     <SolidColorBrush x:Key="WeekGridSelectedBackground" Color="#4C8DF6" />
                     <SolidColorBrush x:Key="WeekGridSelectedForeground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="DbErrorBannerBackground" Color="#C62828" />
+                    <SolidColorBrush x:Key="DbErrorBannerForeground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="DbBackupBannerBackground" Color="#FFD54F" />
+                    <SolidColorBrush x:Key="DbBackupBannerForeground" Color="#212121" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

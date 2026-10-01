@@ -22,7 +22,27 @@
         </Style>
     </Window.Styles>
 
-    <Grid>
+    <Grid RowDefinitions="Auto,*">
+        <!-- DB banners: yellow = server down, loaded from local SQLite backup;
+             red = no database at all, default data shown -->
+        <Border Grid.Row="0"
+                IsVisible="{Binding IsServerDown}"
+                Background="{DynamicResource DbBackupBannerBackground}"
+                Padding="12,8">
+            <TextBlock Foreground="{DynamicResource DbBackupBannerForeground}"
+                       FontWeight="SemiBold"
+                       Text="{Binding DbBannerText}" />
+        </Border>
+        <Border Grid.Row="0"
+                IsVisible="{Binding IsDatabaseError}"
+                Background="{DynamicResource DbErrorBannerBackground}"
+                Padding="12,8">
+            <TextBlock Foreground="{DynamicResource DbErrorBannerForeground}"
+                       FontWeight="SemiBold"
+                       Text="{Binding DbBannerText}" />
+        </Border>
+
+        <Grid Grid.Row="1">
         <Grid IsVisible="{Binding IsMainVisible}">
             <Grid Margin="16">
                 <Grid.RowDefinitions>
@@ -228,5 +248,6 @@
 
         <!-- New Task / Edit Task form -->
         <views:NewTaskEntryView Margin="16" IsVisible="{Binding IsNewTaskOpen}" />
+        </Grid>
     </Grid>
 </Window>
