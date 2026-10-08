@@ -39,7 +39,10 @@ class Program
         var mongoDatabaseName = configuration["MongoDb:DatabaseName"] ?? string.Empty;
 
         var sqlitePath = configuration["Sqlite:DatabasePath"]
-            ?? Path.Combine(AppContext.BaseDirectory, "adaptable_plan.db");
+            ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "AdaptablePlan",
+                "adaptable_plan.db");
 
         services.AddSingleton(new MongoDbSettings
         {
@@ -71,6 +74,7 @@ class Program
         Services = services.BuildServiceProvider();
 
         // Initialize DB (creates SQLite file/tables; no-op for MongoDB)
+        Directory.CreateDirectory(Path.GetDirectoryName(sqlitePath)!);
         var db = Services.GetRequiredService<IAdaptablePlanDb>();
         db.EnsureCreatedAsync().GetAwaiter().GetResult();
 
