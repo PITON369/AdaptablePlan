@@ -2,7 +2,7 @@ using AdaptablePlan.Core.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
-namespace AdaptablePlan.UI.ViewModels;
+namespace AdaptablePlan.UI.Models;
 
 public partial class ScheduleItem : ObservableObject
 {

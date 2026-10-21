@@ -1,7 +1,8 @@
 using System;
+using AdaptablePlan.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AdaptablePlan.UI.ViewModels;
+namespace AdaptablePlan.UI;
 
 public static class ViewModelLocator
 {

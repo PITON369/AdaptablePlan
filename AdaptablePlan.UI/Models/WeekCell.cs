@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace AdaptablePlan.UI.ViewModels;
+namespace AdaptablePlan.UI.Models;
 
 public sealed class WeekCell
 {

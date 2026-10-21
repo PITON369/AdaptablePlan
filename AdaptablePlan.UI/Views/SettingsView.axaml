@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
+             x:Class="AdaptablePlan.UI.Views.SettingsView"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel Spacing="12" VerticalAlignment="Top" Margin="16">
+        <TextBlock FontWeight="SemiBold" FontSize="18" Text="Settings" />
+
+        <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold" Text="Database" />
+            <Button Content="Delete database"
+                    HorizontalAlignment="Left"
+                    Command="{Binding RequestDeleteDatabaseCommand}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        IsVisible="{Binding ConfirmDeleteDb}">
+                <TextBlock Text="Delete all data? This cannot be undone."
+                           VerticalAlignment="Center" />
+                <Button Content="Yes, delete"
+                        Command="{Binding DeleteDatabaseCommand}" />
+                <Button Content="Cancel"
+                        Command="{Binding CancelDeleteDatabaseCommand}"
+                        Classes="secondary" />
+            </StackPanel>
+        </StackPanel>
+
+        <Button Content="Close" HorizontalAlignment="Right"
+                Command="{Binding CloseSettingsCommand}" />
+    </StackPanel>
+</UserControl>

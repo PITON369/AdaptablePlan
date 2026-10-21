@@ -1,7 +1,7 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace AdaptablePlan.UI.ViewModels;
+namespace AdaptablePlan.UI.Models;
 
 // IsSelected — подсветка заголовка дня, в котором выбрана таска.
 public sealed class WeekDayHeader : ObservableObject

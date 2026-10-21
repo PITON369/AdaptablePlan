@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace AdaptablePlan.UI.ViewModels;
+namespace AdaptablePlan.UI.Models;
 
 // TimeLabel обновляется при выборе таски: столбец Time показывает времена
 // выбранного дня. DefaultLabel — общий интервал строки по всем дням.

@@ -8,11 +8,6 @@ using AdaptablePlan.Core.Models;
 
 namespace AdaptablePlan.Core.Data;
 
-public class SqliteDbSettings
-{
-    public string DatabasePath { get; init; } = string.Empty;
-}
-
 // Дневной бэкап: при первом запуске за день копирует данные активного
 // провайдера (Mongo на сервере) в локальный SQLite-файл. Дата последнего
 // бэкапа хранится в файле-маркере рядом с базой (<путь>.backup-stamp).

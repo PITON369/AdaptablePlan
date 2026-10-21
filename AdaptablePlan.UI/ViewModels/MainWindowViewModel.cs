@@ -1,6 +1,7 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
 using AdaptablePlan.Core.Settings;
+using AdaptablePlan.UI.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -176,8 +177,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool HasValidationMessage => !string.IsNullOrEmpty(ValidationMessage);
 
-    public bool IsMainVisible => !IsNewTaskOpen && !IsSettingsOpen;
-
     // --- Constructors ---
     public MainWindowViewModel()
     {
@@ -226,9 +225,6 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnIsDayViewChanged(bool value) => RegenerateSchedule();
     partial void OnIsWeekViewChanged(bool value) => RegenerateSchedule();
     partial void OnStartWeekOnMondayChanged(bool value) => RegenerateSchedule();
-
-    partial void OnIsNewTaskOpenChanged(bool value) => OnPropertyChanged(nameof(IsMainVisible));
-    partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsMainVisible));
 
     partial void OnValidationMessageChanged(string value)
         => OnPropertyChanged(nameof(HasValidationMessage));

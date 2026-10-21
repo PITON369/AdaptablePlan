@@ -66,8 +66,6 @@ class Program
                 break;
         }
 
-        services.AddSingleton<IAdaptablePlanDbContext, AdaptablePlanDbContext>();
-
         // --- UI ---
         services.AddSingleton<MainWindowViewModel>();
 
