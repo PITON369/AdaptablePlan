@@ -6,10 +6,13 @@ namespace AdaptablePlan.UI.Models;
 
 public partial class ScheduleItem : ObservableObject
 {
-    public DayOfWeek Day { get; init; }
+    // Конкретная дата пункта расписания (из разворота шаблона).
+    public DateTime Date { get; init; }
+
+    public DayOfWeek Day => Date.DayOfWeek;
     public TaskTemplate Template { get; init; } = new();
 
-    // Время, разрешённое для этого дня (вариант DayTimes, покрывающий Day).
+    // Пустые, если у пункта нет времени (задача без интервала на этот день).
     public string StartTime { get; init; } = string.Empty;
     public string EndTime { get; init; } = string.Empty;
 

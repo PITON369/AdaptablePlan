@@ -28,6 +28,19 @@ public partial class TaskTemplate : ObservableObject
     [ObservableProperty]
     private DateTime? _date;
 
+    [ObservableProperty]
+    private RecurrenceKind _kind = RecurrenceKind.Weekly;
+
+    // Для Weekly: 1 = каждую неделю, 2 = через неделю и т.д.
+    [ObservableProperty]
+    private int _weekInterval = 1;
+
+    [ObservableProperty]
+    private DateTime? _startDate;
+
+    [ObservableProperty]
+    private DateTime? _endDate;
+
     // Время задачи: несколько вариантов под разные дни недели
     // (например, Пн+Пт 9:00, Вт-Чт 9:20, Сб-Вс 10:00).
     public List<TaskTimeVariant> DayTimes { get; set; } = new();

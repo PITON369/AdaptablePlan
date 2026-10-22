@@ -22,6 +22,7 @@ public static class SqliteBackup
 
         var templates = await source.TaskTemplates.GetAllAsync(ct);
         var entries = await source.ScheduleEntries.GetAllAsync(ct);
+        var pages = await source.CustomPages.GetAllAsync(ct);
 
         using var target = new SQLiteAdaptablePlanDb(sqlitePath);
         await target.EnsureCreatedAsync(ct);
@@ -30,13 +31,15 @@ public static class SqliteBackup
             await target.TaskTemplates.InsertAsync(t, ct);
         foreach (var e in entries)
             await target.ScheduleEntries.InsertAsync(e, ct);
+        foreach (var p in pages)
+            await target.CustomPages.InsertAsync(p, ct);
 
         File.WriteAllText(stampPath, today);
     }
 
     // Загрузка из локальной SQLite-копии — fallback, когда сервер БД недоступен.
     // null = файла нет или в нём нет данных.
-    public static async Task<(List<TaskTemplate> Templates, List<ScheduleEntry> Entries)?> LoadFromSqliteAsync(
+    public static async Task<(List<TaskTemplate> Templates, List<ScheduleEntry> Entries, List<CustomPage> Pages)?> LoadFromSqliteAsync(
         string sqlitePath, CancellationToken ct = default)
     {
         if (!File.Exists(sqlitePath))
@@ -46,10 +49,11 @@ public static class SqliteBackup
         await db.EnsureCreatedAsync(ct);
         var templates = await db.TaskTemplates.GetAllAsync(ct);
         var entries = await db.ScheduleEntries.GetAllAsync(ct);
-        if (templates.Count == 0 && entries.Count == 0)
+        var pages = await db.CustomPages.GetAllAsync(ct);
+        if (templates.Count == 0 && entries.Count == 0 && pages.Count == 0)
             return null;
 
-        return (templates.ToList(), entries.ToList());
+        return (templates.ToList(), entries.ToList(), pages.ToList());
     }
 
     // Дата последнего бэкапа из файла-маркера, для показа в баннере.

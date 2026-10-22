@@ -11,6 +11,7 @@ public interface IAdaptablePlanDb
 {
     IRepository<TaskTemplate> TaskTemplates { get; }
     IRepository<ScheduleEntry> ScheduleEntries { get; }
+    IRepository<CustomPage> CustomPages { get; }
 
     Task EnsureCreatedAsync(CancellationToken ct = default);
     Task ClearAsync(CancellationToken ct = default);

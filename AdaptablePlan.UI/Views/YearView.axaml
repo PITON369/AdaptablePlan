@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
+             x:Class="AdaptablePlan.UI.Views.YearView"
+             x:DataType="vm:MainWindowViewModel">
+    <!-- Year: checklist "plans for the year" -->
+    <StackPanel Spacing="4">
+        <TextBlock Text="Plans for the year" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,4" />
+        <ItemsControl ItemsSource="{Binding YearPage.Entries}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                        <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                        <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+            <TextBox Width="280" PlaceholderText="New plan" Text="{Binding NewYearEntryText, Mode=TwoWay}" />
+            <Button Content="Add" Command="{Binding AddYearEntryCommand}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

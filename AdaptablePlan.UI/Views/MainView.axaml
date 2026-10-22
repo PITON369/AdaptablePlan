@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
-             xmlns:models="using:AdaptablePlan.UI.Models"
              xmlns:converters="using:AdaptablePlan.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
              x:Class="AdaptablePlan.UI.Views.MainView"
@@ -11,15 +10,6 @@
     <UserControl.Resources>
         <converters:NullToBoolConverter x:Key="NullToBool" />
     </UserControl.Resources>
-
-    <UserControl.Styles>
-        <Style Selector="Border.selected">
-            <Setter Property="Background" Value="{DynamicResource WeekGridSelectedBackground}" />
-        </Style>
-        <Style Selector="Border.selected TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource WeekGridSelectedForeground}" />
-        </Style>
-    </UserControl.Styles>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -29,145 +19,38 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Status bar -->
-        <TextBlock Grid.Row="0"
-                   Margin="0,0,0,8"
-                   FontWeight="SemiBold"
-                   Text="{Binding AppStatus}" />
-
-        <!-- Day / Week toggle -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal"
-                    Spacing="8" Margin="0,0,0,8">
-            <RadioButton Content="Day" IsChecked="{Binding IsDayView, Mode=TwoWay}" />
-            <RadioButton Content="Week" IsChecked="{Binding IsWeekView, Mode=TwoWay}" />
+        <!-- Mode toggle: Day / Week / Month / Year / Custom -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <RadioButton Content="Day" IsChecked="{Binding IsDayMode, Mode=TwoWay}" />
+            <RadioButton Content="Week" IsChecked="{Binding IsWeekMode, Mode=TwoWay}" />
+            <RadioButton Content="Month" IsChecked="{Binding IsMonthMode, Mode=TwoWay}" />
+            <RadioButton Content="Year" IsChecked="{Binding IsYearMode, Mode=TwoWay}" />
+            <RadioButton Content="Custom" IsChecked="{Binding IsCustomMode, Mode=TwoWay}" />
+            <ComboBox x:Name="CustomPagesCombo" Margin="16,0,0,0" Width="160"
+                      IsEnabled="{Binding IsCustomMode}"
+                      ItemsSource="{Binding CustomPageList}"
+                      SelectedItem="{Binding SelectedCustomPage, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CustomPageViewModel">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock VerticalAlignment="Center" Margin="16,0,0,0"
+                       FontWeight="SemiBold"
+                       Text="{Binding SelectedDateText}" />
+            <Button Content="&lt;" Margin="16,0,0,0" Command="{Binding PreviousPeriodCommand}" />
+            <Button Content="&gt;" Command="{Binding NextPeriodCommand}" />
+            <Button Content="Today" Command="{Binding GoToTodayCommand}" />
             <CheckBox Content="Start week on Monday"
                       VerticalAlignment="Center"
-                      Margin="24,0,0,0"
+                      Margin="16,0,0,0"
                       IsChecked="{Binding StartWeekOnMonday, Mode=TwoWay}"
-                      IsVisible="{Binding IsWeekView}" />
+                      IsVisible="{Binding IsWeekMode}" />
         </StackPanel>
 
-        <!-- Day view: vertical list -->
-        <ListBox Grid.Row="2"
-                 ItemsSource="{Binding Schedule}"
-                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                 IsVisible="{Binding IsDayView}">
-            <ListBox.Styles>
-                <Style Selector="ListBoxItem">
-                    <Setter Property="Padding" Value="4,0" />
-                    <Setter Property="MinHeight" Value="20" />
-                </Style>
-            </ListBox.Styles>
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="models:ScheduleItem">
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,2">
-                        <TextBlock MinWidth="50" Text="{Binding StartTime}" />
-                        <TextBlock MinWidth="50" Text="{Binding EndTime}" />
-                        <TextBlock Text="{Binding Activity}" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-
-        <!-- Week view: horizontal timetable (days on top, time on the left) -->
-        <ScrollViewer Grid.Row="2"
-                      IsVisible="{Binding IsWeekView}"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <!-- Day headers -->
-                <StackPanel Orientation="Horizontal">
-                    <Border Width="90" Padding="4,3"
-                            Background="{DynamicResource WeekGridHeaderBackground}"
-                            BorderBrush="{DynamicResource WeekGridLineBrush}"
-                            BorderThickness="1,1,1,1">
-                        <TextBlock Text="Time" FontWeight="SemiBold" TextAlignment="Right" />
-                    </Border>
-                    <ItemsControl ItemsSource="{Binding WeekDayHeaders}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:WeekDayHeader">
-                                <Border Width="{Binding ColumnWidth}" Padding="4,3"
-                                        Background="{DynamicResource WeekGridHeaderBackground}"
-                                        BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                        BorderThickness="0,1,1,1"
-                                        Classes.selected="{Binding IsSelected}">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                               TextAlignment="Center" />
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <!-- Time rows -->
-                <ItemsControl ItemsSource="{Binding WeekRows}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:WeekRow">
-                            <StackPanel Orientation="Horizontal">
-                                <Border Width="90" Padding="4,2"
-                                        Background="{DynamicResource WeekGridTimeBackground}"
-                                        BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                        BorderThickness="1,1,0,1">
-                                    <TextBlock Text="{Binding TimeLabel}" FontSize="11"
-                                               TextAlignment="Right" TextWrapping="Wrap" />
-                                </Border>
-                                <ItemsControl ItemsSource="{Binding Cells}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:WeekCell">
-                                            <Border Width="{Binding ColumnWidth}" MinHeight="22" Padding="1"
-                                                    BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                                    BorderThickness="0,1,1,1">
-                                                <ItemsControl ItemsSource="{Binding Tasks}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="models:ScheduleItem">
-                                                            <Button FontSize="11"
-                                                                    Padding="3,1"
-                                                                    MinHeight="18"
-                                                                    HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Left"
-                                                                    Click="OnCellButtonClick"
-                                                                    Classes.selected="{Binding IsSelected}">
-                                                                <TextBlock Text="{Binding Activity}"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <Button.Styles>
-                                                                    <Style Selector="Button">
-                                                                        <Setter Property="Background"
-                                                                                Value="Transparent" />
-                                                                        <Setter Property="BorderThickness"
-                                                                                Value="0" />
-                                                                    </Style>
-                                                                    <Style Selector="Button.selected">
-                                                                        <Setter Property="Background"
-                                                                                Value="{DynamicResource WeekGridSelectedBackground}" />
-                                                                        <Setter Property="Foreground"
-                                                                                Value="{DynamicResource WeekGridSelectedForeground}" />
-                                                                        <Setter Property="FontWeight" Value="SemiBold" />
-                                                                    </Style>
-                                                                </Button.Styles>
-                                                            </Button>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </ScrollViewer>
+        <!-- Single slot: code-behind swaps DayView / WeekView / MonthView / YearView / CustomPageView -->
+        <ContentControl Grid.Row="2" x:Name="ScheduleHost" />
 
         <!-- Action buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal"

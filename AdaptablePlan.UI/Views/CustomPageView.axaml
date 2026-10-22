@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
+             x:Class="AdaptablePlan.UI.Views.CustomPageView"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel Spacing="8">
+        <!-- Conflict with the main schedule on the selected date -->
+        <TextBlock Foreground="Red" TextWrapping="Wrap"
+                   Text="{Binding CustomConflictText}"
+                   IsVisible="{Binding CustomConflictText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+        <!-- Page name + type + save -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBox Width="200" Text="{Binding SelectedCustomPage.Name, Mode=TwoWay}" />
+            <ComboBox Width="110"
+                      ItemsSource="{Binding SelectedCustomPage.ViewTypes}"
+                      SelectedItem="{Binding SelectedCustomPage.ViewType, Mode=TwoWay}" />
+            <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
+        </StackPanel>
+
+        <!-- Day view: fixed list of timed entries -->
+        <StackPanel IsVisible="{Binding SelectedCustomPage.IsDayView}" Spacing="4">
+            <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                            <TextBlock MinWidth="45" Text="{Binding StartTime}" />
+                            <TextBlock MinWidth="45" Text="{Binding EndTime}" />
+                            <TextBlock Text="{Binding Name}" />
+                            <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                <TextBox Width="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
+                <TextBox Width="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                <TextBox Width="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Week view: entries grouped by day of week -->
+        <StackPanel IsVisible="{Binding SelectedCustomPage.IsWeekView}" Spacing="4">
+            <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                            <TextBlock MinWidth="40" Text="{Binding DayName}" />
+                            <TextBlock MinWidth="45" Text="{Binding StartTime}" />
+                            <TextBlock MinWidth="45" Text="{Binding EndTime}" />
+                            <TextBlock Text="{Binding Name}" />
+                            <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                <TextBox Width="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
+                <TextBox Width="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                <TextBox Width="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Month view: placeholder (will follow the user's Excel template) -->
+        <TextBlock IsVisible="{Binding SelectedCustomPage.IsMonthView}"
+                   HorizontalAlignment="Left" Margin="0,16,0,0"
+                   FontSize="16" Opacity="0.6"
+                   Text="Month view — placeholder" />
+
+        <!-- List / Year view: checklist -->
+        <StackPanel IsVisible="{Binding SelectedCustomPage.IsChecklistView}" Spacing="4">
+            <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                            <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                            <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                <TextBox Width="280" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Note view: plain multiline text -->
+        <StackPanel IsVisible="{Binding SelectedCustomPage.IsNoteView}" Spacing="4">
+            <TextBox Height="320" AcceptsReturn="True" TextWrapping="Wrap"
+                     Text="{Binding SelectedCustomPage.NoteText, Mode=TwoWay}" />
+            <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>
