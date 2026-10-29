@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IAdaptablePlanDb? _db;
     private string _sqlitePath = string.Empty;
+    private DayOffset? _dayOffset;
 
     private static TaskTemplate MakeDefaultTask(string name, TaskType type, int durationMinutes, params TaskTimeVariant[] variants)
         => new()
@@ -48,7 +49,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return
         [
             // Одна задача — три разных времени по группам дней.
-            MakeDefaultTask("Morning standup", TaskType.FixedTime, 0,
+            MakeDefaultTask("Morning standup", TaskType.Recurring, 10,
                 Time("09:00", "09:10", monFri),
                 Time("09:00", "09:20", tueThu)),
             MakeDefaultTask("Study session", TaskType.Recurring, 45,
@@ -240,6 +241,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
             LoadTemplates(templates);
             LoadCustomPages(db);
+            _dayOffset = db.DayOffsets.GetAllAsync().GetAwaiter().GetResult().FirstOrDefault();
+            RestoreDayState();
             IsServerDown = false;
             IsDatabaseError = false;
             AppStatus = dbType == DbType.Sqlite
@@ -255,6 +258,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     LoadTemplates(backup.Value.Templates);
                     ApplyCustomPages(backup.Value.Pages.Count > 0 ? backup.Value.Pages : DefaultCustomPages());
+                    _dayOffset = backup.Value.DayOffsets.FirstOrDefault();
+                    RestoreDayState();
                     IsServerDown = true;
                     IsDatabaseError = false;
                     var stamp = SqliteBackup.ReadLastBackupDate(_sqlitePath);
@@ -307,11 +312,82 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleDay()
+    private async Task ToggleDay()
     {
         DayStarted = !DayStarted;
         if (DayStarted)
+        {
             DayStartTime = DateTime.Now;
+            await ApplyDayStartOffsetAsync();
+        }
+        OnPropertyChanged(nameof(DayStartedText));
+    }
+
+    // Кнопка «Start Day»: дельта = сейчас − время первой задачи дня (по базовым
+    // временам). Все задачи, кроме FixedTime, показываются с этим сдвигом до
+    // следующего нажатия (новый сдвиг перезатирает старый).
+    private async Task ApplyDayStartOffsetAsync()
+    {
+        var today = DateTime.Today;
+        var first = FirstTaskStart(today);
+        if (first == null)
+            return;
+
+        var minutes = (int)(DateTime.Now.TimeOfDay - first.Value).TotalMinutes;
+        var offset = new DayOffset { Date = today.ToString("yyyy-MM-dd"), OffsetMinutes = minutes };
+        _dayOffset = offset;
+        RegenerateSchedule();
+
+        if (_db == null)
+            return;
+
+        // Сервер, при успехе — сразу локальная копия; сервер недоступен — только локально.
+        try
+        {
+            var existing = await _db.DayOffsets.GetByIdAsync(offset.Id);
+            if (existing == null)
+                await _db.DayOffsets.InsertAsync(offset);
+            else
+                await _db.DayOffsets.UpdateAsync(offset);
+            try
+            {
+                await SqliteBackup.SaveDayOffsetAsync(_sqlitePath, offset);
+            }
+            catch
+            {
+                // локальная копия недоступна — не критично
+            }
+        }
+        catch
+        {
+            try
+            {
+                await SqliteBackup.SaveDayOffsetAsync(_sqlitePath, offset);
+            }
+            catch
+            {
+                // нет ни сервера, ни локальной копии — сдвиг только в памяти
+            }
+        }
+    }
+
+    private TimeSpan? FirstTaskStart(DateTime date)
+    {
+        TimeSpan? first = null;
+        foreach (var t in TaskTemplates.Concat(OneTimeTasks))
+            foreach (var (_, start, _) in ScheduleExpander.Expand(t, date, 1))
+                if (ScheduleExpander.TryParseTime(start, out var ts) && (first == null || ts < first))
+                    first = ts;
+        return first;
+    }
+
+    private void RestoreDayState()
+    {
+        if (_dayOffset != null && _dayOffset.Date == DateTime.Today.ToString("yyyy-MM-dd"))
+        {
+            DayStarted = true;
+            DayStartTime = DateTime.Now;
+        }
         OnPropertyChanged(nameof(DayStartedText));
     }
 

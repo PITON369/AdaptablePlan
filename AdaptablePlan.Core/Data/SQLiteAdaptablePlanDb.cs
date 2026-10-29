@@ -40,6 +40,7 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
     private readonly Lazy<IRepository<TaskTemplate>> _taskTemplates;
     private readonly Lazy<IRepository<ScheduleEntry>> _scheduleEntries;
     private readonly Lazy<IRepository<CustomPage>> _customPages;
+    private readonly Lazy<IRepository<DayOffset>> _dayOffsets;
 
     public SQLiteAdaptablePlanDb(string dbPath)
     {
@@ -47,11 +48,13 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
         _taskTemplates = new(() => new SqliteRepository<TaskTemplate>(this, "TaskTemplates"));
         _scheduleEntries = new(() => new SqliteRepository<ScheduleEntry>(this, "ScheduleEntries"));
         _customPages = new(() => new SqliteRepository<CustomPage>(this, "CustomPages"));
+        _dayOffsets = new(() => new SqliteRepository<DayOffset>(this, "DayOffsets"));
     }
 
     public IRepository<TaskTemplate> TaskTemplates => _taskTemplates.Value;
     public IRepository<ScheduleEntry> ScheduleEntries => _scheduleEntries.Value;
     public IRepository<CustomPage> CustomPages => _customPages.Value;
+    public IRepository<DayOffset> DayOffsets => _dayOffsets.Value;
 
     public async Task EnsureCreatedAsync(CancellationToken ct = default)
     {
@@ -89,6 +92,17 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
             """;
             await cmd.ExecuteNonQueryAsync(ct);
         }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS DayOffsets (
+                    Id TEXT PRIMARY KEY,
+                    Body TEXT NOT NULL
+                )
+            """;
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
     }
 
     internal async Task<string?> FindIdAsync(string table, string id, CancellationToken ct)
@@ -103,7 +117,7 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
     public async Task ClearAsync(CancellationToken ct = default)
     {
         var conn = Connection;
-        foreach (var table in new[] { "TaskTemplates", "ScheduleEntries", "CustomPages" })
+        foreach (var table in new[] { "TaskTemplates", "ScheduleEntries", "CustomPages", "DayOffsets" })
         {
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $"DELETE FROM {table}";

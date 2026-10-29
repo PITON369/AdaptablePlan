@@ -144,7 +144,7 @@ public partial class MainWindowViewModel
         var byDate = new Dictionary<DateTime, List<ScheduleItem>>();
         foreach (var t in TaskTemplates.Concat(OneTimeTasks))
         {
-            foreach (var (date, start, end) in ScheduleExpander.Expand(t, windowStart, dayCount))
+            foreach (var (date, start, end) in ScheduleExpander.Expand(t, windowStart, dayCount, _dayOffset))
             {
                 var item = new ScheduleItem
                 {

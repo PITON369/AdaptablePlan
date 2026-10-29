@@ -23,6 +23,7 @@ public static class SqliteBackup
         var templates = await source.TaskTemplates.GetAllAsync(ct);
         var entries = await source.ScheduleEntries.GetAllAsync(ct);
         var pages = await source.CustomPages.GetAllAsync(ct);
+        var dayOffsets = await source.DayOffsets.GetAllAsync(ct);
 
         using var target = new SQLiteAdaptablePlanDb(sqlitePath);
         await target.EnsureCreatedAsync(ct);
@@ -33,13 +34,15 @@ public static class SqliteBackup
             await target.ScheduleEntries.InsertAsync(e, ct);
         foreach (var p in pages)
             await target.CustomPages.InsertAsync(p, ct);
+        foreach (var o in dayOffsets)
+            await target.DayOffsets.InsertAsync(o, ct);
 
         File.WriteAllText(stampPath, today);
     }
 
     // Загрузка из локальной SQLite-копии — fallback, когда сервер БД недоступен.
     // null = файла нет или в нём нет данных.
-    public static async Task<(List<TaskTemplate> Templates, List<ScheduleEntry> Entries, List<CustomPage> Pages)?> LoadFromSqliteAsync(
+    public static async Task<(List<TaskTemplate> Templates, List<ScheduleEntry> Entries, List<CustomPage> Pages, List<DayOffset> DayOffsets)?> LoadFromSqliteAsync(
         string sqlitePath, CancellationToken ct = default)
     {
         if (!File.Exists(sqlitePath))
@@ -50,10 +53,20 @@ public static class SqliteBackup
         var templates = await db.TaskTemplates.GetAllAsync(ct);
         var entries = await db.ScheduleEntries.GetAllAsync(ct);
         var pages = await db.CustomPages.GetAllAsync(ct);
-        if (templates.Count == 0 && entries.Count == 0 && pages.Count == 0)
+        var dayOffsets = await db.DayOffsets.GetAllAsync(ct);
+        if (templates.Count == 0 && entries.Count == 0 && pages.Count == 0 && dayOffsets.Count == 0)
             return null;
 
-        return (templates.ToList(), entries.ToList(), pages.ToList());
+        return (templates.ToList(), entries.ToList(), pages.ToList(), dayOffsets.ToList());
+    }
+
+    // Немедленная запись сдвига дня в локальную копию (INSERT OR REPLACE —
+    // одна запись с фиксированным Id перезаписывается).
+    public static async Task SaveDayOffsetAsync(string sqlitePath, DayOffset offset, CancellationToken ct = default)
+    {
+        using var db = new SQLiteAdaptablePlanDb(sqlitePath);
+        await db.EnsureCreatedAsync(ct);
+        await db.DayOffsets.InsertAsync(offset, ct);
     }
 
     // Дата последнего бэкапа из файла-маркера, для показа в баннере.

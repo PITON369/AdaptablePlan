@@ -71,8 +71,9 @@ public static class ScheduleExpander
         => d.Date.AddDays(-(((int)d.DayOfWeek + 6) % 7));
 
     // Разворот шаблона в пункты на дни диапазона [firstDay, firstDay+dayCount).
-    // Пункт без времени — Start/End пустые строки.
-    public static List<(DateTime Date, string Start, string End)> Expand(TaskTemplate t, DateTime firstDay, int dayCount)
+    // Пункт без времени — Start/End пустые строки. dayOffset применяется только
+    // к своей дате и только к задачам без фиксированного времени.
+    public static List<(DateTime Date, string Start, string End)> Expand(TaskTemplate t, DateTime firstDay, int dayCount, DayOffset? dayOffset = null)
     {
         var result = new List<(DateTime, string, string)>();
         var kind = EffectiveKind(t);
@@ -108,14 +109,24 @@ public static class ScheduleExpander
             {
                 var (s, e) = VariantInterval(t, variant);
                 if (s != null)
-                    start = FormatTime(s.Value);
+                    start = FormatTime(Normalize(Shift(s.Value, date, t, dayOffset)));
                 if (e != null)
-                    end = FormatTime(e.Value);
+                    end = FormatTime(Normalize(Shift(e.Value, date, t, dayOffset)));
             }
             result.Add((date, start, end));
         }
         return result;
     }
+
+    private static TimeSpan Shift(TimeSpan time, DateTime date, TaskTemplate t, DayOffset? dayOffset)
+        => dayOffset != null && dayOffset.Date == date.ToString("yyyy-MM-dd") && t.Type != TaskType.FixedTime
+            ? time + TimeSpan.FromMinutes(dayOffset.OffsetMinutes)
+            : time;
+
+    // Сдвиг может увести время в предыдущие сутки — тогда показываем его
+    // как время прошедшей ночи (23:xx), а не отрицательное.
+    private static TimeSpan Normalize(TimeSpan t)
+        => t < TimeSpan.Zero ? t.Add(TimeSpan.FromHours(24)) : t;
 
     private static int Mod(int x, int m)
         => ((x % m) + m) % m;
