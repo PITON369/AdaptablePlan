@@ -63,8 +63,9 @@
                     Spacing="8" Margin="0,8,0,0">
             <Button Content="{Binding DayStartedText}"
                     Command="{Binding ToggleDayCommand}" />
-            <Button Content="Finish Task"
-                    Command="{Binding FinishCurrentTaskCommand}" />
+            <Button Content="{Binding TaskActionText}"
+                    Command="{Binding ToggleTaskCommand}"
+                    IsEnabled="{Binding CanToggleTask}" />
             <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
                        FontWeight="SemiBold"
                        Text="{Binding SelectedTimeText}" />

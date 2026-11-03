@@ -14,6 +14,9 @@
         <Style Selector="Border.selected TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource WeekGridSelectedForeground}" />
         </Style>
+        <Style Selector="Button.running">
+            <Setter Property="Background" Value="{DynamicResource RunningBackground}" />
+        </Style>
     </UserControl.Styles>
 
     <!-- Week view: horizontal timetable (days on top, time on the left) -->
@@ -81,7 +84,8 @@
                                                                 HorizontalAlignment="Stretch"
                                                                 HorizontalContentAlignment="Left"
                                                                 Click="OnCellButtonClick"
-                                                                Classes.selected="{Binding IsSelected}">
+                                                                Classes.selected="{Binding IsSelected}"
+                                                                Classes.running="{Binding IsRunning}">
                                                             <TextBlock Text="{Binding Activity}"
                                                                        TextTrimming="CharacterEllipsis" />
                                                             <Button.Styles>

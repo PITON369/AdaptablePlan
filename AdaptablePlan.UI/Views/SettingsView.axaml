@@ -10,6 +10,12 @@
         <TextBlock FontWeight="SemiBold" FontSize="18" Text="Settings" />
 
         <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold" Text="Schedule" />
+            <CheckBox Content="Auto-start next task after finishing one"
+                      IsChecked="{Binding AutoStartNextTask, Mode=TwoWay}" />
+        </StackPanel>
+
+        <StackPanel Spacing="8">
             <TextBlock FontWeight="SemiBold" Text="Database" />
             <Button Content="Delete database"
                     HorizontalAlignment="Left"

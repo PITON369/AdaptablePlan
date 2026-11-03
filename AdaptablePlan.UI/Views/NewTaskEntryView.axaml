@@ -37,6 +37,10 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+            <TextBlock Text="{Binding CurrentTaskTypeDescription}"
+                       FontSize="12"
+                       Opacity="0.75"
+                       TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="4">

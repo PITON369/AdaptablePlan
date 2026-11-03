@@ -102,6 +102,7 @@ public partial class MainWindowViewModel
             ? string.Empty
             : $"{value.DayName} {value.StartTime}-{value.EndTime}";
         UpdateTimeLabels();
+        OnPropertyChanged(nameof(CanToggleTask));
     }
 
     private static TimeSpan? ParseTime(string? t)
@@ -159,11 +160,23 @@ public partial class MainWindowViewModel
             }
         }
 
-        // Day view: пункты выбранного дня по времени.
+        // Пометка идущей таски: одна и та же запись живёт и в Day-списке,
+        // и в ячейках недельной сетки.
+        var today = DateTime.Today;
+        foreach (var list in byDate.Values)
+            foreach (var i in list)
+                i.IsRunning = _runningTaskId != Guid.Empty
+                    && i.Template.Id == _runningTaskId
+                    && i.Date == today;
+
+        // Day view: пункты выбранного дня в порядке плана — по базовому (без
+        // сдвигов) старту. Сортировка по отображаемому времени перемешивала бы
+        // таски, когда сдвиг уводит их через соседей; FixedTime тоже остаётся
+        // на своём плановом месте. Таски без времени — в конце дня.
         Schedule.Clear();
         if (byDate.TryGetValue(SelectedDate.Date, out var dayItems))
         {
-            foreach (var i in dayItems.OrderBy(i => ParseTime(i.StartTime) ?? TimeSpan.MaxValue))
+            foreach (var i in dayItems.OrderBy(i => BaseInterval(i).BaseStart ?? TimeSpan.MaxValue))
                 Schedule.Add(i);
         }
 

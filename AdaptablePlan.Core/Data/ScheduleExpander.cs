@@ -109,19 +109,28 @@ public static class ScheduleExpander
             {
                 var (s, e) = VariantInterval(t, variant);
                 if (s != null)
-                    start = FormatTime(Normalize(Shift(s.Value, date, t, dayOffset)));
-                if (e != null)
-                    end = FormatTime(Normalize(Shift(e.Value, date, t, dayOffset)));
+                {
+                    // Сдвиг считается по базовому старту и двигает начало и конец
+                    // одинаково — длительность таски не меняется.
+                    var shift = TimeSpan.FromMinutes(ShiftMinutes(s.Value, date, t, dayOffset));
+                    start = FormatTime(Normalize(s.Value + shift));
+                    if (e != null)
+                        end = FormatTime(Normalize(e.Value + shift));
+                }
             }
             result.Add((date, start, end));
         }
         return result;
     }
 
-    private static TimeSpan Shift(TimeSpan time, DateTime date, TaskTemplate t, DayOffset? dayOffset)
-        => dayOffset != null && dayOffset.Date == date.ToString("yyyy-MM-dd") && t.Type != TaskType.FixedTime
-            ? time + TimeSpan.FromMinutes(dayOffset.OffsetMinutes)
-            : time;
+    // Накопительный сдвиг от событий дня: событие действует на таски, чей
+    // базовый старт не раньше его точки. FixedTime не сдвигается никогда.
+    private static int ShiftMinutes(TimeSpan baseStart, DateTime date, TaskTemplate t, DayOffset? dayOffset)
+    {
+        if (dayOffset == null || dayOffset.Date != date.ToString("yyyy-MM-dd") || t.Type == TaskType.FixedTime)
+            return 0;
+        return dayOffset.CumulativeShift((int)baseStart.TotalMinutes);
+    }
 
     // Сдвиг может увести время в предыдущие сутки — тогда показываем его
     // как время прошедшей ночи (23:xx), а не отрицательное.

@@ -22,6 +22,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IAdaptablePlanDb? _db;
     private string _sqlitePath = string.Empty;
     private DayOffset? _dayOffset;
+    private Guid _runningTaskId;
 
     private static TaskTemplate MakeDefaultTask(string name, TaskType type, int durationMinutes, params TaskTimeVariant[] variants)
         => new()
@@ -220,7 +221,18 @@ public partial class MainWindowViewModel : ViewModelBase
         ShowTimeVariants = CurrentTask.Type != TaskType.OneTime;
         ShowDuration = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
         IsRecurringOrThings = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
+        OnPropertyChanged(nameof(CurrentTaskTypeDescription));
     }
+
+    // Краткая подсказка про выбранный тип в редакторе таски.
+    public string CurrentTaskTypeDescription => CurrentTask.Type switch
+    {
+        TaskType.Recurring => "Repeats on a schedule (days of week, daily, ...). End = start + duration. Time shifts when the day or a task starts late.",
+        TaskType.FixedTime => "Fixed start and end times. Never shifts.",
+        TaskType.Things => "A thing to do on chosen days, with a duration. Shifts like recurring tasks.",
+        TaskType.OneTime => "One-time task on a specific date, without a time slot.",
+        _ => string.Empty,
+    };
 
     // --- DB load (sync) ---
     // Каскад: серверная БД → локальная SQLite-копия → дефолтные данные.
@@ -314,60 +326,191 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task ToggleDay()
     {
-        DayStarted = !DayStarted;
         if (DayStarted)
         {
+            // End Day: день окончен — идущая таска останавливается.
+            DayStarted = false;
+            _runningTaskId = Guid.Empty;
+            if (_dayOffset != null)
+                _dayOffset.RunningTaskId = Guid.Empty;
+            RegenerateSchedule();
+            await SaveDayOffsetAsync();
+        }
+        else
+        {
+            DayStarted = true;
             DayStartTime = DateTime.Now;
             await ApplyDayStartOffsetAsync();
         }
         OnPropertyChanged(nameof(DayStartedText));
+        OnPropertyChanged(nameof(TaskActionText));
+        OnPropertyChanged(nameof(CanToggleTask));
     }
 
-    // Кнопка «Start Day»: дельта = сейчас − время первой задачи дня (по базовым
-    // временам). Все задачи, кроме FixedTime, показываются с этим сдвигом до
-    // следующего нажатия (новый сдвиг перезатирает старый).
+    // Кнопка «Start Day»: дельта = сейчас − базовое время первой задачи дня.
+    // Событие становится первой точкой сдвига; новый день перезатирает старый.
     private async Task ApplyDayStartOffsetAsync()
     {
         var today = DateTime.Today;
         var first = FirstTaskStart(today);
-        if (first == null)
-            return;
 
-        var minutes = (int)(DateTime.Now.TimeOfDay - first.Value).TotalMinutes;
-        var offset = new DayOffset { Date = today.ToString("yyyy-MM-dd"), OffsetMinutes = minutes };
-        _dayOffset = offset;
+        var events = new List<DayShiftEvent>();
+        if (first != null)
+        {
+            var minutes = (int)(DateTime.Now.TimeOfDay - first.Value).TotalMinutes;
+            if (minutes != 0)
+                events.Add(new DayShiftEvent { TimeMinutes = (int)first.Value.TotalMinutes, DeltaMinutes = minutes });
+        }
+
+        _dayOffset = new DayOffset
+        {
+            Date = today.ToString("yyyy-MM-dd"),
+            Started = true,
+            Events = events,
+        };
+        _runningTaskId = Guid.Empty;
         RegenerateSchedule();
+        await SaveDayOffsetAsync();
+    }
 
-        if (_db == null)
+    // --- Start/Finish Task ---
+    // Одна контекстная кнопка: ничего не идёт — начинает выделенную таску;
+    // идёт — заканчивает её (дельта = сейчас − отображаемый конец), выделяет
+    // следующую таску дня и, при AutoStartNextTask, сразу запускает её.
+    [RelayCommand]
+    private async Task ToggleTask()
+    {
+        if (_runningTaskId != Guid.Empty)
+            await FinishRunningTaskAsync();
+        else
+            await StartSelectedTaskAsync();
+        OnPropertyChanged(nameof(TaskActionText));
+        OnPropertyChanged(nameof(CanToggleTask));
+    }
+
+    public string TaskActionText => IsTaskRunning ? "Finish Task" : "Start Task";
+    public bool CanToggleTask => IsTaskRunning || SelectedItem != null;
+
+    private bool IsTaskRunning
+        => _runningTaskId != Guid.Empty && RunningItem() != null;
+
+    private ScheduleItem? RunningItem()
+        => Schedule.FirstOrDefault(i => i.Template.Id == _runningTaskId && i.Date == DateTime.Today);
+
+    [ObservableProperty]
+    private bool _autoStartNextTask;
+
+    // Базовые (без сдвигов) времена таски на её дату — для точек событий.
+    private static (TimeSpan? BaseStart, TimeSpan? BaseEnd) BaseInterval(ScheduleItem item)
+    {
+        var expanded = ScheduleExpander.Expand(item.Template, item.Date, 1);
+        if (expanded.Count == 0)
+            return (null, null);
+        return (ParseTime(expanded[0].Start), ParseTime(expanded[0].End));
+    }
+
+    private async Task StartSelectedTaskAsync()
+    {
+        var item = SelectedItem;
+        if (item == null)
             return;
 
-        // Сервер, при успехе — сразу локальная копия; сервер недоступен — только локально.
+        var (baseStart, _) = BaseInterval(item);
+        _runningTaskId = item.Template.Id;
+        EnsureDayRecord();
+
+        // Дельта считается арифметически: отображаемое время = база +
+        // накопительный сдвиг. Парсить текст нельзя — при уходе за полночь
+        // он «завёрнут» (23:xx), и дельта улетает на ±7 часов (лавина сдвигов).
+        // FixedTime события не пишет: он всегда идёт по своему времени и
+        // ничего о сдвиге расписания не сообщает.
+        if (baseStart != null && item.Template.Type != TaskType.FixedTime)
+        {
+            var baseMin = (int)baseStart.Value.TotalMinutes;
+            var delta = (int)DateTime.Now.TimeOfDay.TotalMinutes
+                - (baseMin + _dayOffset!.CumulativeShift(baseMin));
+            if (delta != 0)
+                _dayOffset.Events.Add(new DayShiftEvent { TimeMinutes = baseMin, DeltaMinutes = delta });
+        }
+        RegenerateSchedule();
+        await SaveDayOffsetAsync();
+    }
+
+    private async Task FinishRunningTaskAsync()
+    {
+        var item = RunningItem();
+        if (item == null)
+            return;
+
+        var (baseStart, baseEnd) = BaseInterval(item);
+        var nextIndex = Schedule.IndexOf(item) + 1;
+        var next = nextIndex > 0 && nextIndex < Schedule.Count ? Schedule[nextIndex] : null;
+
+        _runningTaskId = Guid.Empty;
+        EnsureDayRecord();
+        // Отображаемый конец = база конца + сдвиг, посчитанный по базовому
+        // старту (Expand двигает начало и конец одним сдвигом). Арифметика, не
+        // парсинг текста — иначе «завёрнутое» за полночь время даёт лавину.
+        // FixedTime события не пишет (см. StartSelectedTaskAsync).
+        if (baseEnd != null && baseStart != null && item.Template.Type != TaskType.FixedTime)
+        {
+            var startMin = (int)baseStart.Value.TotalMinutes;
+            var delta = (int)DateTime.Now.TimeOfDay.TotalMinutes
+                - ((int)baseEnd.Value.TotalMinutes + _dayOffset!.CumulativeShift(startMin));
+            if (delta != 0)
+                _dayOffset.Events.Add(new DayShiftEvent { TimeMinutes = (int)baseEnd.Value.TotalMinutes, DeltaMinutes = delta });
+        }
+        RegenerateSchedule();
+        await SaveDayOffsetAsync();
+
+        // Ссылки после RegenerateSchedule устаревают — ищем таску заново.
+        if (next == null)
+            return;
+        var nextItem = Schedule.FirstOrDefault(i => i.Template.Id == next.Template.Id && i.Date == next.Date);
+        if (nextItem == null)
+            return;
+        SelectedItem = nextItem;
+        if (AutoStartNextTask)
+        {
+            _runningTaskId = nextItem.Template.Id;
+            RegenerateSchedule();
+            await SaveDayOffsetAsync();
+        }
+    }
+
+    // Запись состояния дня на сегодня; старый день не трогаем — события
+    // применяются только к своей дате.
+    private void EnsureDayRecord()
+    {
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        if (_dayOffset == null || _dayOffset.Date != today)
+            _dayOffset = new DayOffset { Date = today };
+    }
+
+    private async Task SaveDayOffsetAsync()
+    {
+        if (_db == null || _dayOffset == null)
+            return;
+
         try
         {
-            var existing = await _db.DayOffsets.GetByIdAsync(offset.Id);
+            var existing = await _db.DayOffsets.GetByIdAsync(_dayOffset.Id);
             if (existing == null)
-                await _db.DayOffsets.InsertAsync(offset);
+                await _db.DayOffsets.InsertAsync(_dayOffset);
             else
-                await _db.DayOffsets.UpdateAsync(offset);
-            try
-            {
-                await SqliteBackup.SaveDayOffsetAsync(_sqlitePath, offset);
-            }
-            catch
-            {
-                // локальная копия недоступна — не критично
-            }
+                await _db.DayOffsets.UpdateAsync(_dayOffset);
         }
         catch
         {
-            try
-            {
-                await SqliteBackup.SaveDayOffsetAsync(_sqlitePath, offset);
-            }
-            catch
-            {
-                // нет ни сервера, ни локальной копии — сдвиг только в памяти
-            }
+            // сервер недоступен
+        }
+        try
+        {
+            await SqliteBackup.SaveDayOffsetAsync(_sqlitePath, _dayOffset);
+        }
+        catch
+        {
+            // локальная копия недоступна
         }
     }
 
@@ -385,10 +528,14 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_dayOffset != null && _dayOffset.Date == DateTime.Today.ToString("yyyy-MM-dd"))
         {
-            DayStarted = true;
+            DayStarted = _dayOffset.Started;
             DayStartTime = DateTime.Now;
+            _runningTaskId = _dayOffset.RunningTaskId;
         }
         OnPropertyChanged(nameof(DayStartedText));
+        RegenerateSchedule();
+        OnPropertyChanged(nameof(TaskActionText));
+        OnPropertyChanged(nameof(CanToggleTask));
     }
 
     [RelayCommand]
@@ -417,6 +564,9 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_db != null)
         {
             await _db.ClearAsync();
+            _dayOffset = null;
+            _runningTaskId = Guid.Empty;
+            DayStarted = false;
             var templates = DefaultTaskTemplates();
             foreach (var t in templates)
                 await _db.TaskTemplates.InsertAsync(t);
@@ -433,10 +583,5 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         ConfirmDeleteDb = false;
         IsSettingsOpen = false;
-    }
-
-    [RelayCommand]
-    private void FinishCurrentTask()
-    {
     }
 }

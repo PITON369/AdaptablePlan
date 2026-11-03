@@ -19,6 +19,9 @@ public partial class ScheduleItem : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    [ObservableProperty]
+    private bool _isRunning;
+
     public string Activity => Template.Name;
 
     public string DayName => Day switch
