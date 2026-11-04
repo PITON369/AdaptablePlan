@@ -13,20 +13,23 @@ public class DayShiftEvent
     public int DeltaMinutes { get; set; }
 }
 
-// Состояние дня: накопительные сдвиги расписания («начать день»/«начать
-// таску»/«закончить таску») и какая таска сейчас идёт. Одна запись с
-// фиксированным Id — новый день перезатирает старый.
+// Состояние дня: накопительные сдвиги расписания («начать таску»/«закончить
+// таску») и какая таска сейчас идёт. Одна запись с фиксированным Id — новый
+// день перезатирает старый.
 // Дата строкой yyyy-MM-dd, чтобы не зависеть от таймзоны при хранении в Mongo.
-// IgnoreExtraElements: старые документы с OffsetMinutes (до событийной модели)
-// должны читаться без исключения — Mongo-драйвер иначе роняет GetAllAsync.
+// IgnoreExtraElements: старые документы с OffsetMinutes и Started (до
+// событийной модели) должны читаться без исключения — Mongo-драйвер иначе
+// роняет GetAllAsync.
 [BsonIgnoreExtraElements]
 public class DayOffset
 {
     public string Id { get; set; } = "day-offset";
     public string Date { get; set; } = string.Empty;
-    public bool Started { get; set; }
     public List<DayShiftEvent> Events { get; set; } = new();
     public Guid RunningTaskId { get; set; }
+
+    // Выполненные за день таски (по Id шаблона): зелёная отметка/галочка.
+    public List<Guid> DoneTaskIds { get; set; } = new();
 
     // Накопительный сдвиг для таски с базовым стартом baseMinutes.
     public int CumulativeShift(int baseMinutes)

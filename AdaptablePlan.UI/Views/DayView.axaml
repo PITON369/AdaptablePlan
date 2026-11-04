@@ -7,28 +7,51 @@
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
              x:Class="AdaptablePlan.UI.Views.DayView"
              x:DataType="vm:MainWindowViewModel">
+    <!-- CheckBoxMinHeight: перекрытие ресурса темы Fluent (там 32) — иначе строка списка не ниже 32px -->
+    <UserControl.Resources>
+        <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
+    </UserControl.Resources>
     <UserControl.Styles>
         <Style Selector="Border.running">
             <Setter Property="Background" Value="{DynamicResource RunningBackground}" />
         </Style>
+        <Style Selector="Border.done">
+            <Setter Property="Background" Value="{DynamicResource DoneBackground}" />
+        </Style>
     </UserControl.Styles>
     <!-- Day view: vertical list of the selected day's items -->
     <ListBox ItemsSource="{Binding Schedule}"
-             SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+             SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+             Grid.IsSharedSizeScope="True">
         <ListBox.Styles>
             <Style Selector="ListBoxItem">
-                <Setter Property="Padding" Value="4,0" />
-                <Setter Property="MinHeight" Value="20" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinHeight" Value="16" />
             </Style>
         </ListBox.Styles>
         <ListBox.ItemTemplate>
             <DataTemplate x:DataType="models:ScheduleItem">
-                <Border Classes.running="{Binding IsRunning}" Padding="4,2" CornerRadius="2">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <TextBlock MinWidth="50" Text="{Binding StartTime}" />
-                        <TextBlock MinWidth="50" Text="{Binding EndTime}" />
-                        <TextBlock Text="{Binding Activity}" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                <Border Classes.running="{Binding IsRunning}" CornerRadius="2">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Start" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="End" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Activity" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding StartTime}" />
+                        <TextBlock Grid.Column="1" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding EndTime}" />
+                        <Border Grid.Column="2" Margin="0,0,5,0"
+                                Classes.done="{Binding IsDone}"
+                                CornerRadius="2">
+                            <TextBlock VerticalAlignment="Center" Text="{Binding Activity}" />
+                        </Border>
+                        <CheckBox Grid.Column="3" MinHeight="0" MinWidth="0" Padding="0"
+                                  VerticalAlignment="Center"
+                                  IsEnabled="{Binding IsToday}"
+                                  IsChecked="{Binding IsDone, Mode=OneWay}"
+                                  Click="OnDoneClick" />
+                    </Grid>
                 </Border>
             </DataTemplate>
         </ListBox.ItemTemplate>

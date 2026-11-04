@@ -10,7 +10,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace AdaptablePlan.UI.ViewModels;
 
@@ -131,12 +133,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isRecurringOrThings;
 
     [ObservableProperty]
-    private bool _dayStarted;
-
-    [ObservableProperty]
-    private DateTime _dayStartTime;
-
-    [ObservableProperty]
     private bool _startWeekOnMonday = true;
 
     [ObservableProperty]
@@ -171,7 +167,38 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _dbBannerText = string.Empty;
 
-    public string DayStartedText => DayStarted ? "End Day" : "Start Day";
+    // Внешний вид: шрифт и тема, настройки в %APPDATA%\AdaptablePlan\settings.json.
+    [ObservableProperty]
+    private double _fontSize;
+
+    [ObservableProperty]
+    private string _theme = "System";
+
+    partial void OnFontSizeChanged(double value) => SaveAppearance();
+    partial void OnThemeChanged(string value)
+    {
+        ApplyTheme();
+        SaveAppearance();
+    }
+
+    private void ApplyTheme()
+    {
+        var app = Application.Current;
+        if (app == null)
+            return;
+        app.RequestedThemeVariant = Theme switch
+        {
+            "Light" => ThemeVariant.Light,
+            "Dark" => ThemeVariant.Dark,
+            _ => ThemeVariant.Default,
+        };
+        if (app.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+            foreach (var window in desktop.Windows)
+                window.RequestedThemeVariant = app.RequestedThemeVariant;
+    }
+
+    private void SaveAppearance()
+        => new Models.AppSettings { FontSize = FontSize, Theme = Theme }.Save();
 
     public bool HasValidationMessage => !string.IsNullOrEmpty(ValidationMessage);
 
@@ -193,6 +220,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void InitCommon()
     {
+        var settings = Models.AppSettings.Load();
+        FontSize = settings.FontSize;
+        Theme = settings.Theme;
         SyncTaskTypeFlags();
         CurrentTask.PropertyChanged += OnCurrentTaskPropertyChanged;
         PropertyChanged += OnViewModelPropertyChanged;
@@ -323,73 +353,35 @@ public partial class MainWindowViewModel : ViewModelBase
         AppStatus = "Refreshed from database";
     }
 
-    [RelayCommand]
-    private async Task ToggleDay()
-    {
-        if (DayStarted)
-        {
-            // End Day: день окончен — идущая таска останавливается.
-            DayStarted = false;
-            _runningTaskId = Guid.Empty;
-            if (_dayOffset != null)
-                _dayOffset.RunningTaskId = Guid.Empty;
-            RegenerateSchedule();
-            await SaveDayOffsetAsync();
-        }
-        else
-        {
-            DayStarted = true;
-            DayStartTime = DateTime.Now;
-            await ApplyDayStartOffsetAsync();
-        }
-        OnPropertyChanged(nameof(DayStartedText));
-        OnPropertyChanged(nameof(TaskActionText));
-        OnPropertyChanged(nameof(CanToggleTask));
-    }
-
-    // Кнопка «Start Day»: дельта = сейчас − базовое время первой задачи дня.
-    // Событие становится первой точкой сдвига; новый день перезатирает старый.
-    private async Task ApplyDayStartOffsetAsync()
-    {
-        var today = DateTime.Today;
-        var first = FirstTaskStart(today);
-
-        var events = new List<DayShiftEvent>();
-        if (first != null)
-        {
-            var minutes = (int)(DateTime.Now.TimeOfDay - first.Value).TotalMinutes;
-            if (minutes != 0)
-                events.Add(new DayShiftEvent { TimeMinutes = (int)first.Value.TotalMinutes, DeltaMinutes = minutes });
-        }
-
-        _dayOffset = new DayOffset
-        {
-            Date = today.ToString("yyyy-MM-dd"),
-            Started = true,
-            Events = events,
-        };
-        _runningTaskId = Guid.Empty;
-        RegenerateSchedule();
-        await SaveDayOffsetAsync();
-    }
-
     // --- Start/Finish Task ---
-    // Одна контекстная кнопка: ничего не идёт — начинает выделенную таску;
-    // идёт — заканчивает её (дельта = сейчас − отображаемый конец), выделяет
-    // следующую таску дня и, при AutoStartNextTask, сразу запускает её.
+    // Одна контекстная кнопка: ничего не идёт — начинает выделенную таску,
+    // а при пустом выделении — первую таску дня (бывший «Start Day»: дельта
+    // привязывается к её базовому старту); идёт — заканчивает её (дельта =
+    // сейчас − отображаемый конец), выделяет следующую таску дня и, при
+    // AutoStartNextTask, сразу запускает её.
     [RelayCommand]
     private async Task ToggleTask()
     {
+        // В отчёте Custom-страницы механика сдвигов дня (DayOffset) неприменима —
+        // кнопка показана для одинакового вида, но ничего не делает.
+        if (Mode == ScheduleMode.Custom && !IsCustomEditor)
+            return;
         if (_runningTaskId != Guid.Empty)
             await FinishRunningTaskAsync();
         else
-            await StartSelectedTaskAsync();
+        {
+            var item = SelectedItem ?? FirstTodayItem();
+            if (item != null)
+                await StartSelectedTaskAsync(item);
+        }
         OnPropertyChanged(nameof(TaskActionText));
         OnPropertyChanged(nameof(CanToggleTask));
     }
 
-    public string TaskActionText => IsTaskRunning ? "Finish Task" : "Start Task";
-    public bool CanToggleTask => IsTaskRunning || SelectedItem != null;
+    public string TaskActionText
+        => IsTaskRunning ? "Finish Task" : SelectedItem != null ? "Start Task" : "Start First Task";
+
+    public bool CanToggleTask => IsTaskRunning || SelectedItem != null || FirstTodayItem() != null;
 
     private bool IsTaskRunning
         => _runningTaskId != Guid.Empty && RunningItem() != null;
@@ -409,12 +401,8 @@ public partial class MainWindowViewModel : ViewModelBase
         return (ParseTime(expanded[0].Start), ParseTime(expanded[0].End));
     }
 
-    private async Task StartSelectedTaskAsync()
+    private async Task StartSelectedTaskAsync(ScheduleItem item)
     {
-        var item = SelectedItem;
-        if (item == null)
-            return;
-
         var (baseStart, _) = BaseInterval(item);
         _runningTaskId = item.Template.Id;
         EnsureDayRecord();
@@ -448,6 +436,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _runningTaskId = Guid.Empty;
         EnsureDayRecord();
+        MarkDone(item.Template.Id);
         // Отображаемый конец = база конца + сдвиг, посчитанный по базовому
         // старту (Expand двигает начало и конец одним сдвигом). Арифметика, не
         // парсинг текста — иначе «завёрнутое» за полночь время даёт лавину.
@@ -476,6 +465,38 @@ public partial class MainWindowViewModel : ViewModelBase
             RegenerateSchedule();
             await SaveDayOffsetAsync();
         }
+    }
+
+    // Отметка выполнения в записи дня (для RegenerateSchedule).
+    private void MarkDone(Guid templateId)
+    {
+        if (_dayOffset != null && !_dayOffset.DoneTaskIds.Contains(templateId))
+            _dayOffset.DoneTaskIds.Add(templateId);
+    }
+
+    // Ручная галочка в Day-списке; работает только для сегодняшних пунктов —
+    // DayOffset хранит состояние одного дня. У обёрток записей Custom-страницы
+    // галочка переключает саму запись страницы.
+    public async Task ToggleDone(ScheduleItem item)
+    {
+        if (item.CustomSource != null)
+        {
+            item.CustomSource.IsDone = !item.CustomSource.IsDone;
+            item.IsDone = item.CustomSource.IsDone;
+            var page = YearPage != null && YearPage.Model.Entries.Contains(item.CustomSource)
+                ? YearPage
+                : CustomPages.FirstOrDefault(p => p.Model.Entries.Contains(item.CustomSource));
+            if (page != null)
+                SaveCustomPage(page);
+            return;
+        }
+        if (!item.IsToday)
+            return;
+        EnsureDayRecord();
+        if (!_dayOffset!.DoneTaskIds.Remove(item.Template.Id))
+            _dayOffset.DoneTaskIds.Add(item.Template.Id);
+        item.IsDone = _dayOffset.DoneTaskIds.Contains(item.Template.Id);
+        await SaveDayOffsetAsync();
     }
 
     // Запись состояния дня на сегодня; старый день не трогаем — события
@@ -514,25 +535,32 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private TimeSpan? FirstTaskStart(DateTime date)
+    // Первая таска сегодняшнего дня по базовому старту. Когда день показан
+    // (SelectedDate = сегодня) — берём реальный пункт из Schedule, иначе
+    // строим свежий экземпляр (выделение на него не вешаем: его нет в списке).
+    private ScheduleItem? FirstTodayItem()
     {
-        TimeSpan? first = null;
+        var today = DateTime.Today;
+        if (SelectedDate.Date == today && Mode is not (ScheduleMode.Month or ScheduleMode.Year))
+            return Schedule.FirstOrDefault();
+
+        ScheduleItem? first = null;
+        var firstStart = TimeSpan.MaxValue;
         foreach (var t in TaskTemplates.Concat(OneTimeTasks))
-            foreach (var (_, start, _) in ScheduleExpander.Expand(t, date, 1))
-                if (ScheduleExpander.TryParseTime(start, out var ts) && (first == null || ts < first))
-                    first = ts;
+            foreach (var (date, start, end) in ScheduleExpander.Expand(t, today, 1))
+            {
+                if (date != today || !ScheduleExpander.TryParseTime(start, out var ts) || ts >= firstStart)
+                    continue;
+                firstStart = ts;
+                first = new ScheduleItem { Date = date, Template = t, StartTime = start, EndTime = end };
+            }
         return first;
     }
 
     private void RestoreDayState()
     {
         if (_dayOffset != null && _dayOffset.Date == DateTime.Today.ToString("yyyy-MM-dd"))
-        {
-            DayStarted = _dayOffset.Started;
-            DayStartTime = DateTime.Now;
             _runningTaskId = _dayOffset.RunningTaskId;
-        }
-        OnPropertyChanged(nameof(DayStartedText));
         RegenerateSchedule();
         OnPropertyChanged(nameof(TaskActionText));
         OnPropertyChanged(nameof(CanToggleTask));
@@ -566,7 +594,6 @@ public partial class MainWindowViewModel : ViewModelBase
             await _db.ClearAsync();
             _dayOffset = null;
             _runningTaskId = Guid.Empty;
-            DayStarted = false;
             var templates = DefaultTaskTemplates();
             foreach (var t in templates)
                 await _db.TaskTemplates.InsertAsync(t);

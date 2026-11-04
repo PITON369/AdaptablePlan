@@ -20,6 +20,7 @@
                     <SolidColorBrush x:Key="WeekGridSelectedBackground" Color="#2F7DE1" />
                     <SolidColorBrush x:Key="WeekGridSelectedForeground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="RunningBackground" Color="#B3E5B3" />
+                    <SolidColorBrush x:Key="DoneBackground" Color="#A5D6A7" />
                     <SolidColorBrush x:Key="DbErrorBannerBackground" Color="#B3261E" />
                     <SolidColorBrush x:Key="DbErrorBannerForeground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="DbBackupBannerBackground" Color="#F9A825" />
@@ -32,6 +33,7 @@
                     <SolidColorBrush x:Key="WeekGridSelectedBackground" Color="#4C8DF6" />
                     <SolidColorBrush x:Key="WeekGridSelectedForeground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="RunningBackground" Color="#2E5B2E" />
+                    <SolidColorBrush x:Key="DoneBackground" Color="#3E6B3E" />
                     <SolidColorBrush x:Key="DbErrorBannerBackground" Color="#C62828" />
                     <SolidColorBrush x:Key="DbErrorBannerForeground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="DbBackupBannerBackground" Color="#FFD54F" />

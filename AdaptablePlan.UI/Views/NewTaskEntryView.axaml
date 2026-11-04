@@ -12,7 +12,7 @@
     <UserControl.Resources>
         <converters:TaskTypeDisplayConverter x:Key="TaskTypeDisplayConverter" />
     </UserControl.Resources>
-    <StackPanel Spacing="12" MaxWidth="480" HorizontalAlignment="Left">
+    <StackPanel Spacing="12" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <TextBlock FontWeight="SemiBold" FontSize="18"
                        IsVisible="{Binding !IsEditing}"
@@ -59,8 +59,7 @@
                 <TextBlock FontWeight="SemiBold" Text="Times"
                            VerticalAlignment="Center" />
                 <Button Content="Add time"
-                        Command="{Binding AddTimeVariantCommand}"
-                        Classes="secondary" />
+                        Command="{Binding AddTimeVariantCommand}" />
             </StackPanel>
             <ItemsControl ItemsSource="{Binding TimeVariants}">
                 <ItemsControl.ItemTemplate>
@@ -74,7 +73,6 @@
                                 <TimePicker SelectedTime="{Binding EndValue, Mode=TwoWay}"
                                             ClockIdentifier="24HourClock" />
                                 <Button Content="Remove"
-                                        Classes="secondary"
                                         Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTimeVariantCommand}"
                                         CommandParameter="{Binding}" />
                             </StackPanel>
@@ -94,8 +92,7 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}"
-                    Classes="secondary" />
+            <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}" />
             <Button Content="Save" Command="{Binding SaveNewTaskCommand}"
                     IsVisible="{Binding !IsEditing}"
                     IsDefault="True" />

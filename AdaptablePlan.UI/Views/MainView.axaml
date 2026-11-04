@@ -3,14 +3,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
-             xmlns:converters="using:AdaptablePlan.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
              x:Class="AdaptablePlan.UI.Views.MainView"
              x:DataType="vm:MainWindowViewModel">
-    <UserControl.Resources>
-        <converters:NullToBoolConverter x:Key="NullToBool" />
-    </UserControl.Resources>
-
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -32,7 +27,7 @@
                       SelectedItem="{Binding SelectedCustomPage, Mode=TwoWay}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:CustomPageViewModel">
-                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding DisplayName}" />
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
@@ -61,20 +56,19 @@
         <!-- Action buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal"
                     Spacing="8" Margin="0,8,0,0">
-            <Button Content="{Binding DayStartedText}"
-                    Command="{Binding ToggleDayCommand}" />
             <Button Content="{Binding TaskActionText}"
                     Command="{Binding ToggleTaskCommand}"
-                    IsEnabled="{Binding CanToggleTask}" />
+                    IsEnabled="{Binding CanToggleTask}"
+                    IsVisible="{Binding ShowTaskButton}" />
             <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
                        FontWeight="SemiBold"
                        Text="{Binding SelectedTimeText}" />
             <Button Content="Edit" Margin="24,0,0,0"
                     Command="{Binding EditTaskCommand}"
-                    IsEnabled="{Binding SelectedItem, Converter={StaticResource NullToBool}}" />
+                    IsEnabled="{Binding CanEditTask}" />
             <Button Content="Delete"
                     Command="{Binding DeleteTaskCommand}"
-                    IsEnabled="{Binding SelectedItem, Converter={StaticResource NullToBool}}" />
+                    IsEnabled="{Binding CanEditTask}" />
             <Button Content="Refresh" Margin="24,0,0,0"
                     Command="{Binding RefreshCommand}" />
             <Button Content="New task" Margin="24,0,0,0"

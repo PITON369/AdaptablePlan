@@ -68,7 +68,7 @@ public partial class MainWindowViewModel
     [RelayCommand]
     private void EditTask()
     {
-        if (SelectedTask == null)
+        if (SelectedTask == null || SelectedItem?.CustomSource != null)
             return;
 
         CurrentTask = new()
@@ -91,7 +91,7 @@ public partial class MainWindowViewModel
     [RelayCommand]
     private void DeleteTask()
     {
-        if (SelectedTask == null || _db == null)
+        if (SelectedTask == null || _db == null || SelectedItem?.CustomSource != null)
             return;
 
         if (SelectedTask.Type == TaskType.OneTime)

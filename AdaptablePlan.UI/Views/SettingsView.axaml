@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
              x:Class="AdaptablePlan.UI.Views.SettingsView"
              x:DataType="vm:MainWindowViewModel">
@@ -13,6 +14,24 @@
             <TextBlock FontWeight="SemiBold" Text="Schedule" />
             <CheckBox Content="Auto-start next task after finishing one"
                       IsChecked="{Binding AutoStartNextTask, Mode=TwoWay}" />
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock FontWeight="SemiBold" Text="Appearance" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock MinWidth="90" VerticalAlignment="Center" Text="Font size" />
+                <Slider Minimum="10" Maximum="24" Width="150"
+                        Value="{Binding FontSize, Mode=TwoWay}" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding FontSize, StringFormat={}{0:0}}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Width="90" VerticalAlignment="Center" Text="Theme" />
+                <ComboBox SelectedItem="{Binding Theme, Mode=TwoWay}" Width="150">
+                    <sys:String>System</sys:String>
+                    <sys:String>Light</sys:String>
+                    <sys:String>Dark</sys:String>
+                </ComboBox>
+            </StackPanel>
         </StackPanel>
 
         <StackPanel Spacing="8">
@@ -28,8 +47,7 @@
                 <Button Content="Yes, delete"
                         Command="{Binding DeleteDatabaseCommand}" />
                 <Button Content="Cancel"
-                        Command="{Binding CancelDeleteDatabaseCommand}"
-                        Classes="secondary" />
+                        Command="{Binding CancelDeleteDatabaseCommand}" />
             </StackPanel>
         </StackPanel>
 

@@ -26,7 +26,22 @@ public partial class CustomPageViewModel : ObservableObject
     public string Name
     {
         get => Model.Name;
-        set { Model.Name = value; OnPropertyChanged(); }
+        set { Model.Name = value; OnPropertyChanged(); OnPropertyChanged(nameof(DisplayName)); }
+    }
+
+    // Пустое имя показывается как «Custom N» по номеру слота.
+    public string DisplayName
+        => string.IsNullOrWhiteSpace(Model.Name) ? $"Custom {Slot}" : Model.Name;
+
+    // Очистка страницы: имя пустое (в списке снова «Custom N»), записи удалены. Вид не трогаем.
+    public void Clear()
+    {
+        Model.Entries.Clear();
+        Entries.Clear();
+        Model.Name = string.Empty;
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(DisplayName));
+        Save();
     }
 
     public bool IsDayView => Model.ViewType == PageViewType.Day;
@@ -60,6 +75,17 @@ public partial class CustomPageViewModel : ObservableObject
 
     public ObservableCollection<CustomEntryViewModel> Entries { get; }
 
+    internal static string DayName(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Mon",
+        DayOfWeek.Tuesday => "Tue",
+        DayOfWeek.Wednesday => "Wed",
+        DayOfWeek.Thursday => "Thu",
+        DayOfWeek.Friday => "Fri",
+        DayOfWeek.Saturday => "Sat",
+        _ => "Sun",
+    };
+
     public string NoteText
     {
         get => Model.NoteText;
@@ -68,13 +94,13 @@ public partial class CustomPageViewModel : ObservableObject
 
     public void Save() => _save(this);
 
-    public void AddEntry(string name, string start, string end)
+    public void AddEntry(string name, string start, string end, DayOfWeek day)
     {
         var entry = new CustomEntry
         {
             Id = Guid.NewGuid(),
             Name = name,
-            Day = DateTime.Today.DayOfWeek,
+            Day = day,
             StartTime = start,
             EndTime = end,
         };
@@ -121,16 +147,7 @@ public partial class CustomEntryViewModel : ObservableObject
         set { Model.EndTime = value; OnPropertyChanged(); }
     }
 
-    public string DayName => Model.Day switch
-    {
-        DayOfWeek.Monday => "Mon",
-        DayOfWeek.Tuesday => "Tue",
-        DayOfWeek.Wednesday => "Wed",
-        DayOfWeek.Thursday => "Thu",
-        DayOfWeek.Friday => "Fri",
-        DayOfWeek.Saturday => "Sat",
-        _ => "Sun",
-    };
+    public string DayName => CustomPageViewModel.DayName(Model.Day);
 
     public bool IsDone
     {

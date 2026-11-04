@@ -22,6 +22,17 @@ public partial class ScheduleItem : ObservableObject
     [ObservableProperty]
     private bool _isRunning;
 
+    [ObservableProperty]
+    private bool _isDone;
+
+    // Непустой у обёрток записей Custom-страниц (отчёт кастомной страницы).
+    // По нему клики маршрутизируются в данные страницы, а не в расписание.
+    public CustomEntry? CustomSource { get; init; }
+
+    // Галочка выполнения активна только для сегодняшних пунктов —
+    // DayOffset хранит состояние одного дня.
+    public bool IsToday => Date == DateTime.Today;
+
     public string Activity => Template.Name;
 
     public string DayName => Day switch

@@ -3,99 +3,168 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+             xmlns:views="using:AdaptablePlan.UI.Views"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
              x:Class="AdaptablePlan.UI.Views.CustomPageView"
              x:DataType="vm:MainWindowViewModel">
+    <!-- CheckBoxMinHeight: перекрытие ресурса темы Fluent (там 32) — компактные строки -->
+    <UserControl.Resources>
+        <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="Border.done">
+            <Setter Property="Background" Value="{DynamicResource DoneBackground}" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="16" />
+        </Style>
+    </UserControl.Styles>
     <StackPanel Spacing="8">
-        <!-- Conflict with the main schedule on the selected date -->
-        <TextBlock Foreground="Red" TextWrapping="Wrap"
-                   Text="{Binding CustomConflictText}"
-                   IsVisible="{Binding CustomConflictText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
-        <!-- Page name + type + save -->
+        <!-- Page name + type + Save/Edit/Clear -->
         <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBox Width="200" Text="{Binding SelectedCustomPage.Name, Mode=TwoWay}" />
             <ComboBox Width="110"
                       ItemsSource="{Binding SelectedCustomPage.ViewTypes}"
                       SelectedItem="{Binding SelectedCustomPage.ViewType, Mode=TwoWay}" />
             <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
+            <!-- Edit виден только в отчёте: возвращает к редактированию -->
+            <Button Content="Edit" Command="{Binding EditCustomPageCommand}"
+                    IsVisible="{Binding !IsCustomEditor}" />
+            <Button Content="Clear" Command="{Binding ClearSelectedPageCommand}" />
         </StackPanel>
 
-        <!-- Day view: fixed list of timed entries -->
-        <StackPanel IsVisible="{Binding SelectedCustomPage.IsDayView}" Spacing="4">
-            <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:CustomEntryViewModel">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
-                            <TextBlock MinWidth="45" Text="{Binding StartTime}" />
-                            <TextBlock MinWidth="45" Text="{Binding EndTime}" />
-                            <TextBlock Text="{Binding Name}" />
-                            <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                <TextBox Width="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
-                <TextBox Width="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
-                <TextBox Width="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
-                <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+        <!-- Editor: type-specific editing UI -->
+        <StackPanel IsVisible="{Binding IsCustomEditor}" Spacing="4">
+            <!-- Conflict with the main schedule on the selected date -->
+            <TextBlock Foreground="Red" TextWrapping="Wrap"
+                       Text="{Binding CustomConflictText}"
+                       IsVisible="{Binding CustomConflictText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <!-- Day: timed entries -->
+            <StackPanel IsVisible="{Binding SelectedCustomPage.IsDayView}" Spacing="4">
+                <ListBox ItemsSource="{Binding SelectedCustomPage.Entries}"
+                         Grid.IsSharedSizeScope="True">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                            <Border CornerRadius="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Start" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="End" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Activity" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding StartTime}" />
+                                    <TextBlock Grid.Column="1" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding EndTime}" />
+                                    <Border Grid.Column="2" Margin="0,0,5,0"
+                                            Classes.done="{Binding IsDone}"
+                                            CornerRadius="2">
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                                    </Border>
+                                    <CheckBox Grid.Column="3" MinHeight="0" MinWidth="0" Padding="0"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                                    <Button Grid.Column="4" Content="✕" Padding="4,0" Margin="5,0,0,0"
+                                            VerticalAlignment="Center" Click="OnRemoveClick" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                    <TextBox MinWidth="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                    <TextBox MinWidth="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                    <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Week: flat list with the day of each entry -->
+            <StackPanel IsVisible="{Binding SelectedCustomPage.IsWeekView}" Spacing="4">
+                <ListBox ItemsSource="{Binding SelectedCustomPage.Entries}"
+                         Grid.IsSharedSizeScope="True">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                            <Border CornerRadius="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Day" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Start" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="End" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Activity" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding DayName}" />
+                                    <TextBlock Grid.Column="1" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding StartTime}" />
+                                    <TextBlock Grid.Column="2" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding EndTime}" />
+                                    <Border Grid.Column="3" Margin="0,0,5,0"
+                                            Classes.done="{Binding IsDone}"
+                                            CornerRadius="2">
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                                    </Border>
+                                    <CheckBox Grid.Column="4" MinHeight="0" MinWidth="0" Padding="0"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                                    <Button Grid.Column="5" Content="✕" Padding="4,0" Margin="5,0,0,0"
+                                            VerticalAlignment="Center" Click="OnRemoveClick" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                    <TextBox MinWidth="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                    <ComboBox MinWidth="100"
+                              ItemsSource="{Binding WeekDays}"
+                              SelectedItem="{Binding NewCustomEntryDay, Mode=TwoWay}" />
+                    <TextBox MinWidth="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                    <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Month: placeholder (will follow the user's Excel template) -->
+            <TextBlock IsVisible="{Binding SelectedCustomPage.IsMonthView}"
+                       HorizontalAlignment="Left" Margin="0,16,0,0"
+                       FontSize="16" Opacity="0.6"
+                       Text="Month view — placeholder" />
+
+            <!-- List / Year: checklist -->
+            <StackPanel IsVisible="{Binding SelectedCustomPage.IsChecklistView}" Spacing="4">
+                <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                                <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                                <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+                    <TextBox Width="280" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                    <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Note: plain multiline text -->
+            <StackPanel IsVisible="{Binding SelectedCustomPage.IsNoteView}" Spacing="4">
+                <TextBox Height="320" AcceptsReturn="True" TextWrapping="Wrap"
+                         Text="{Binding SelectedCustomPage.NoteText, Mode=TwoWay}" />
+                <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
             </StackPanel>
         </StackPanel>
 
-        <!-- Week view: entries grouped by day of week -->
-        <StackPanel IsVisible="{Binding SelectedCustomPage.IsWeekView}" Spacing="4">
-            <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:CustomEntryViewModel">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
-                            <TextBlock MinWidth="40" Text="{Binding DayName}" />
-                            <TextBlock MinWidth="45" Text="{Binding StartTime}" />
-                            <TextBlock MinWidth="45" Text="{Binding EndTime}" />
-                            <TextBlock Text="{Binding Name}" />
-                            <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                <TextBox Width="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
-                <TextBox Width="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
-                <TextBox Width="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
-                <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
-            </StackPanel>
-        </StackPanel>
-
-        <!-- Month view: placeholder (will follow the user's Excel template) -->
-        <TextBlock IsVisible="{Binding SelectedCustomPage.IsMonthView}"
-                   HorizontalAlignment="Left" Margin="0,16,0,0"
-                   FontSize="16" Opacity="0.6"
-                   Text="Month view — placeholder" />
-
-        <!-- List / Year view: checklist -->
-        <StackPanel IsVisible="{Binding SelectedCustomPage.IsChecklistView}" Spacing="4">
-            <ItemsControl ItemsSource="{Binding SelectedCustomPage.Entries}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:CustomEntryViewModel">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
-                            <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" />
-                            <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
-                            <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                <TextBox Width="280" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
-                <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
-            </StackPanel>
-        </StackPanel>
-
-        <!-- Note view: plain multiline text -->
-        <StackPanel IsVisible="{Binding SelectedCustomPage.IsNoteView}" Spacing="4">
-            <TextBox Height="320" AcceptsReturn="True" TextWrapping="Wrap"
-                     Text="{Binding SelectedCustomPage.NoteText, Mode=TwoWay}" />
-            <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
+        <!-- Display: the same templates as the main modes, fed with the page's data -->
+        <StackPanel IsVisible="{Binding !IsCustomEditor}" Spacing="4">
+            <views:DayView IsVisible="{Binding SelectedCustomPage.IsDayView}" />
+            <views:WeekView IsVisible="{Binding SelectedCustomPage.IsWeekView}" />
+            <views:MonthView IsVisible="{Binding SelectedCustomPage.IsMonthView}" />
+            <views:YearView IsVisible="{Binding SelectedCustomPage.IsChecklistView}" />
         </StackPanel>
     </StackPanel>
 </UserControl>

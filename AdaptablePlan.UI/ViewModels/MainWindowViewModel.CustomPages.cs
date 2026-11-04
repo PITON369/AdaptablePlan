@@ -14,13 +14,24 @@ public partial class MainWindowViewModel
 {
     public ObservableCollection<CustomPageViewModel> CustomPages { get; } = new();
 
-    // Для ComboBox: Year (Slot 0) + все слоты 1..10.
+    // Для ComboBox в режиме Custom: только слоты 1..10. Год (Slot 0) —
+    // отдельный основной режим (радио Year, вьюха YearView), а не Custom.
     public ObservableCollection<CustomPageViewModel> CustomPageList { get; } = new();
 
     public CustomPageViewModel? YearPage { get; private set; }
 
     [ObservableProperty]
     private CustomPageViewModel? _selectedCustomPage;
+
+    // Custom-режим: true — редактор страницы, false — отчёт (шаблон вида с
+    // данными страницы). Пустая страница и Note всегда открываются в редакторе.
+    [ObservableProperty]
+    private bool _isCustomEditor = true;
+
+    private static bool ShouldEdit(CustomPageViewModel? page)
+        => page == null
+           || page.Model.ViewType == PageViewType.Note
+           || page.Entries.Count == 0;
 
     [ObservableProperty]
     private string _newCustomEntryText = string.Empty;
@@ -31,11 +42,29 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private string _newCustomEntryEnd = string.Empty;
 
+    // День новой записи (для вида Week), по умолчанию — сегодня.
     [ObservableProperty]
-    private string _newYearEntryText = string.Empty;
+    private DayOfWeek _newCustomEntryDay = DateTime.Today.DayOfWeek;
+
+    // Порядок дней в комбобоксе — с понедельника.
+    public DayOfWeek[] WeekDays { get; } =
+        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+         DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+
+    [ObservableProperty]
+    private string _newChecklistText = string.Empty;
 
     partial void OnSelectedCustomPageChanged(CustomPageViewModel? value)
-        => OnPropertyChanged(nameof(CustomConflictText));
+    {
+        IsCustomEditor = ShouldEdit(value);
+        OnPropertyChanged(nameof(CustomConflictText));
+        OnPropertyChanged(nameof(ShowTaskButton));
+        OnPropertyChanged(nameof(ChecklistEntries));
+        OnPropertyChanged(nameof(ChecklistTitle));
+        RegenerateSchedule();
+    }
+
+    partial void OnIsCustomEditorChanged(bool value) => RegenerateSchedule();
 
     // Страница 10 слотов + Year (Slot 0). Виды по умолчанию: первые пять —
     // по одному каждого вида, остальные — списки.
@@ -74,6 +103,17 @@ public partial class MainWindowViewModel
         foreach (var p in pages.OrderBy(p => p.Slot))
         {
             var vm = new CustomPageViewModel(p, SaveCustomPage);
+            // Смена вида страницы влияет на кнопку Start Task и на выбор
+            // редактор/отчёт (Note всегда редактор).
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(CustomPageViewModel.IsDayView))
+                    return;
+                OnPropertyChanged(nameof(ShowTaskButton));
+                IsCustomEditor = ShouldEdit(vm);
+                OnPropertyChanged(nameof(ChecklistEntries));
+                OnPropertyChanged(nameof(ChecklistTitle));
+            };
             if (p.Slot == 0)
                 YearPage = vm;
             else
@@ -92,8 +132,55 @@ public partial class MainWindowViewModel
         _db?.CustomPages.UpdateAsync(page.Model).GetAwaiter().GetResult();
     }
 
+    // Save: сохранить страницу и переключиться на отчёт (Note остаётся
+    // редактором — там показ и редактирование совмещены).
     [RelayCommand]
-    private void SaveSelectedPage() => SelectedCustomPage?.Save();
+    private void SaveSelectedPage()
+    {
+        if (SelectedCustomPage == null)
+            return;
+        SelectedCustomPage.Save();
+        if (SelectedCustomPage.Model.ViewType != PageViewType.Note)
+            IsCustomEditor = false;
+    }
+
+    [RelayCommand]
+    private void EditCustomPage() => IsCustomEditor = true;
+
+    // Чек-лист (шаблон YearView): в режиме Year — страница года,
+    // в отчёте Custom-страницы видов List/Year — записи этой страницы.
+    public string ChecklistTitle
+        => Mode == ScheduleMode.Year
+            ? "Plans for the year"
+            : SelectedCustomPage?.DisplayName ?? string.Empty;
+
+    public ObservableCollection<CustomEntryViewModel>? ChecklistEntries
+        => Mode == ScheduleMode.Year ? YearPage?.Entries
+         : Mode == ScheduleMode.Custom ? SelectedCustomPage?.Entries
+         : null;
+
+    [RelayCommand]
+    private void AddChecklistEntry()
+    {
+        var name = NewChecklistText.Trim();
+        if (name.Length == 0)
+            return;
+        if (Mode == ScheduleMode.Year && YearPage != null)
+            YearPage.AddEntry(name, string.Empty, string.Empty, DateTime.Today.DayOfWeek);
+        else if (Mode == ScheduleMode.Custom && SelectedCustomPage != null)
+            SelectedCustomPage.AddEntry(name, string.Empty, string.Empty, DateTime.Today.DayOfWeek);
+        NewChecklistText = string.Empty;
+    }
+
+    // Очистка возвращает страницу в редактор — данные пусты, показывать отчёт нечего.
+    [RelayCommand]
+    private void ClearSelectedPage()
+    {
+        if (SelectedCustomPage == null)
+            return;
+        SelectedCustomPage.Clear();
+        IsCustomEditor = ShouldEdit(SelectedCustomPage);
+    }
 
     [RelayCommand]
     private void AddCustomEntry()
@@ -101,7 +188,9 @@ public partial class MainWindowViewModel
         var name = NewCustomEntryText.Trim();
         if (SelectedCustomPage == null || name.Length == 0)
             return;
-        SelectedCustomPage.AddEntry(name, NewCustomEntryStart.Trim(), NewCustomEntryEnd.Trim());
+        // День из комбобокса нужен виду Week; в остальных видах день не важен.
+        var day = SelectedCustomPage.IsWeekView ? NewCustomEntryDay : DateTime.Today.DayOfWeek;
+        SelectedCustomPage.AddEntry(name, NewCustomEntryStart.Trim(), NewCustomEntryEnd.Trim(), day);
         NewCustomEntryText = string.Empty;
         NewCustomEntryStart = string.Empty;
         NewCustomEntryEnd = string.Empty;
@@ -116,16 +205,6 @@ public partial class MainWindowViewModel
         (YearPage != null && YearPage.Entries.Contains(entry) ? YearPage
             : CustomPages.FirstOrDefault(p => p.Entries.Contains(entry)))?.RemoveEntry(entry);
         OnPropertyChanged(nameof(CustomConflictText));
-    }
-
-    [RelayCommand]
-    private void AddYearEntry()
-    {
-        var name = NewYearEntryText.Trim();
-        if (YearPage == null || name.Length == 0)
-            return;
-        YearPage.AddEntry(name, string.Empty, string.Empty);
-        NewYearEntryText = string.Empty;
     }
 
     // Пересечение записей выбранной Custom-страницы с пунктами основного

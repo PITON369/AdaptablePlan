@@ -16,9 +16,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            var settings = Models.AppSettings.Load();
+            RequestedThemeVariant = settings.ToThemeVariant();
             desktop.MainWindow = new MainWindow
             {
                 DataContext = ViewModelLocator.MainWindow,
+                FontSize = settings.FontSize,
             };
         }
 

@@ -6,6 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
         x:DataType="vm:MainWindowViewModel"
         x:Class="AdaptablePlan.UI.MainWindow"
+        FontSize="{Binding FontSize}"
         Title="AdaptablePlan" Width="900" Height="650">
     <Grid RowDefinitions="Auto,*">
         <!-- DB banners: yellow = server down, loaded from local SQLite backup;

@@ -56,6 +56,17 @@ public partial class MainWindowViewModel
         set { if (value) Mode = ScheduleMode.Custom; }
     }
 
+    // Кнопка Start/Finish Task нужна только там, где есть список задач дня:
+    // режим Day и Custom-страница вида «день».
+    public bool ShowTaskButton
+        => Mode == ScheduleMode.Day
+           || (Mode == ScheduleMode.Custom && SelectedCustomPage?.IsDayView == true);
+
+    // Edit/Delete работают только с настоящими пунктами расписания;
+    // обёртки записей Custom-страниц не редактируются через эти кнопки.
+    public bool CanEditTask
+        => SelectedItem != null && SelectedItem.CustomSource == null;
+
     public string SelectedDateText
         => Mode is ScheduleMode.Day or ScheduleMode.Week or ScheduleMode.Month
             ? SelectedDate.ToString("ddd d MMM yyyy", CultureInfo.CurrentCulture)
@@ -68,7 +79,10 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(IsMonthMode));
         OnPropertyChanged(nameof(IsYearMode));
         OnPropertyChanged(nameof(IsCustomMode));
+        OnPropertyChanged(nameof(ShowTaskButton));
         OnPropertyChanged(nameof(SelectedDateText));
+        OnPropertyChanged(nameof(ChecklistEntries));
+        OnPropertyChanged(nameof(ChecklistTitle));
         RegenerateSchedule();
     }
 
@@ -103,6 +117,8 @@ public partial class MainWindowViewModel
             : $"{value.DayName} {value.StartTime}-{value.EndTime}";
         UpdateTimeLabels();
         OnPropertyChanged(nameof(CanToggleTask));
+        OnPropertyChanged(nameof(CanEditTask));
+        OnPropertyChanged(nameof(TaskActionText));
     }
 
     private static TimeSpan? ParseTime(string? t)
@@ -130,6 +146,17 @@ public partial class MainWindowViewModel
 
     private void RegenerateSchedule()
     {
+        // Отчёт Custom-страницы: те же шаблоны вьюх (DayView/WeekView), но
+        // данные — записи страницы, а не расписание шаблонов задач.
+        if (Mode == ScheduleMode.Custom && !IsCustomEditor)
+        {
+            Schedule.Clear();
+            WeekDayHeaders.Clear();
+            WeekRows.Clear();
+            BuildCustomDisplay();
+            return;
+        }
+
         // Month сейчас — заглушка, Year — чек-лист: пункты расписания им не нужны.
         if (Mode is ScheduleMode.Month or ScheduleMode.Year)
         {
@@ -153,6 +180,8 @@ public partial class MainWindowViewModel
                     Template = t,
                     StartTime = start,
                     EndTime = end,
+                    IsDone = date == DateTime.Today && _dayOffset != null
+                        && _dayOffset.DoneTaskIds.Contains(t.Id),
                 };
                 if (!byDate.TryGetValue(date, out var list))
                     byDate[date] = list = new List<ScheduleItem>();
@@ -184,6 +213,52 @@ public partial class MainWindowViewModel
             BuildWeekGrid(windowStart, byDate);
 
         OnPropertyChanged(nameof(CustomConflictText));
+    }
+
+    // Данные Custom-страницы в коллекциях шаблонов: Schedule — обёртки записей
+    // страницы (CustomSource указывает на исходную запись), Week-сетка — через
+    // общий BuildWeekGrid с датами текущей недели по дню недели записи.
+    private void BuildCustomDisplay()
+    {
+        var page = SelectedCustomPage;
+        if (page == null)
+            return;
+
+        ScheduleItem Wrap(CustomEntry e, DateTime date) => new()
+        {
+            Date = date,
+            Template = new TaskTemplate { Id = e.Id, Name = e.Name, Type = TaskType.FixedTime },
+            StartTime = e.StartTime,
+            EndTime = e.EndTime,
+            IsDone = e.IsDone,
+            CustomSource = e,
+        };
+
+        if (page.IsDayView)
+        {
+            // Все записи страницы, по времени старта; без времени — в конце.
+            foreach (var e in page.Model.Entries
+                         .Select(e => (Entry: e, Start: ParseTime(e.StartTime)))
+                         .OrderBy(x => x.Start ?? TimeSpan.MaxValue))
+                Schedule.Add(Wrap(e.Entry, SelectedDate.Date));
+        }
+        else if (page.IsWeekView)
+        {
+            var weekStart = WeekStart(SelectedDate.Date);
+            var byDate = new Dictionary<DateTime, List<ScheduleItem>>();
+            foreach (var e in page.Model.Entries)
+            {
+                if (!ScheduleExpander.TryParseTime(e.StartTime, out var s)
+                    || !ScheduleExpander.TryParseTime(e.EndTime, out var t)
+                    || t <= s)
+                    continue;
+                var date = weekStart.AddDays(((int)e.Day - (int)weekStart.DayOfWeek + 7) % 7);
+                if (!byDate.TryGetValue(date, out var list))
+                    byDate[date] = list = new List<ScheduleItem>();
+                list.Add(Wrap(e, date));
+            }
+            BuildWeekGrid(weekStart, byDate);
+        }
     }
 
     // --- Week grid (horizontal timetable: days on top, time on the left) ---
