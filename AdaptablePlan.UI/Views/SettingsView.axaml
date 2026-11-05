@@ -14,6 +14,20 @@
             <TextBlock FontWeight="SemiBold" Text="Schedule" />
             <CheckBox Content="Auto-start next task after finishing one"
                       IsChecked="{Binding AutoStartNextTask, Mode=TwoWay}" />
+            <CheckBox Content="Hide unshifted time columns in Day view"
+                      IsChecked="{Binding HideUnshiftedTime, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <!-- План-время до границы дня относится к предыдущему дню -->
+                <TextBlock Width="90" VerticalAlignment="Center" Text="Day starts at" />
+                <TimePicker SelectedTime="{Binding DayStart, Mode=TwoWay}"
+                            ClockIdentifier="24HourClock" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <!-- Пусто - стандартный системный звук окончания -->
+                <TextBlock Width="90" VerticalAlignment="Center" Text="Time-up sound" />
+                <TextBox Text="{Binding SoundFile}" Width="220" />
+                <Button Content="Browse..." Click="OnBrowseSound" />
+            </StackPanel>
         </StackPanel>
 
         <StackPanel Spacing="8">

@@ -41,8 +41,7 @@ public partial class MainWindowViewModel
 
         CurrentTask.Name = CurrentTask.Name.Trim();
         CurrentTask.DurationMinutes = CurrentTask.Type is TaskType.Recurring or TaskType.Things
-            ? int.Parse(DurationText.Trim())
-            : 0;
+            && int.TryParse(DurationText.Trim(), out var minutes) ? minutes : 0;
         CurrentTask.DayTimes = CurrentTask.Type == TaskType.OneTime
             ? new List<TaskTimeVariant>()
             : TimeVariants.Select(v => v.ToModel()).ToList();
@@ -144,7 +143,10 @@ public partial class MainWindowViewModel
         if (string.IsNullOrWhiteSpace(task.Name))
             return "Enter a task name.";
 
-        if (task.Type is TaskType.Recurring or TaskType.Things)
+        // Длительность нужна, только если у какого-то интервала нет явного
+        // конца: ScheduleExpander берёт EndTime, когда он задан.
+        if (task.Type is TaskType.Recurring or TaskType.Things
+            && TimeVariants.Any(v => v.EndValue is null))
         {
             if (!int.TryParse(DurationText.Trim(), out var minutes) || minutes <= 0)
                 return "Duration must be a positive whole number of minutes (e.g. 30).";
@@ -194,7 +196,18 @@ public partial class MainWindowViewModel
                     continue;
 
                 if (cs.Value < te.Value && ts.Value < ce.Value)
-                    return $"Time overlaps with '{t.Name}' on {ShortDayName(day)} {ScheduleExpander.FormatTime(ts.Value)}";
+                {
+                    var baseText = $"Time overlaps with '{t.Name}' on {ShortDayName(day)}";
+                    // Сегодняшний день идёт со сдвигом: в скобках время по плану,
+                    // рядом - как таска стоит на экране сейчас.
+                    if (day == DateTime.Today.DayOfWeek && _dayOffset != null)
+                    {
+                        var shift = TimeSpan.FromMinutes(_dayOffset.CumulativeShift((int)ts.Value.TotalMinutes));
+                        return $"{baseText} ({ScheduleExpander.FormatTime(ts.Value)}-{ScheduleExpander.FormatTime(te.Value)}) " +
+                            $"{ScheduleExpander.FormatTime(ts.Value + shift)}-{ScheduleExpander.FormatTime(te.Value + shift)}";
+                    }
+                    return $"{baseText} {ScheduleExpander.FormatTime(ts.Value)}-{ScheduleExpander.FormatTime(te.Value)}";
+                }
             }
         }
         return null;

@@ -25,6 +25,9 @@
                     <SolidColorBrush x:Key="DbErrorBannerForeground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="DbBackupBannerBackground" Color="#F9A825" />
                     <SolidColorBrush x:Key="DbBackupBannerForeground" Color="#212121" />
+                    <SolidColorBrush x:Key="DialogOverlayBackground" Color="#66000000" />
+                    <SolidColorBrush x:Key="DialogCardBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="DialogCardForeground" Color="#212121" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="WeekGridHeaderBackground" Color="#2B2B2B" />
@@ -38,6 +41,9 @@
                     <SolidColorBrush x:Key="DbErrorBannerForeground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="DbBackupBannerBackground" Color="#FFD54F" />
                     <SolidColorBrush x:Key="DbBackupBannerForeground" Color="#212121" />
+                    <SolidColorBrush x:Key="DialogOverlayBackground" Color="#66000000" />
+                    <SolidColorBrush x:Key="DialogCardBackground" Color="#2E2E2E" />
+                    <SolidColorBrush x:Key="DialogCardForeground" Color="#F0F0F0" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

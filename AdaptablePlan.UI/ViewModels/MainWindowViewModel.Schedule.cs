@@ -124,14 +124,27 @@ public partial class MainWindowViewModel
     private static TimeSpan? ParseTime(string? t)
         => ScheduleExpander.TryParseTime(t, out var ts) ? ts : null;
 
-    // Окно видимости для текущего режима: начало и число дней.
+    // Ключ порядка план-дня: базовый старт; ночные пункты (до границы дня)
+    // идут в конец дня (+24ч), таски без времени - самими последними.
+    private TimeSpan DayOrderKey(ScheduleItem i)
+    {
+        var t = ParseTime(i.BaseStartTime);
+        if (t == null)
+            return TimeSpan.MaxValue;
+        var dayStart = DayStart ?? new TimeSpan(7, 0, 0);
+        return t.Value < dayStart ? t.Value.Add(TimeSpan.FromHours(24)) : t.Value;
+    }
+
+    // Окно видимости для текущего режима: начало и число дней. День и неделя
+    // берут на один календарный день больше: его раннее утро (до границы дня)
+    // принадлежит предыдущему план-дню и попадает в его список/колонку.
     private (DateTime Start, int Days) VisibilityWindow()
     {
         var d = SelectedDate.Date;
         return Mode switch
         {
-            ScheduleMode.Day => (d, 1),
-            ScheduleMode.Week => (WeekStart(d), 7),
+            ScheduleMode.Day => (d, 2),
+            ScheduleMode.Week => (WeekStart(d), 8),
             ScheduleMode.Month => (new DateTime(d.Year, d.Month, 1), DateTime.DaysInMonth(d.Year, d.Month)),
             ScheduleMode.Year => (new DateTime(d.Year, 1, 1), DateTime.IsLeapYear(d.Year) ? 366 : 365),
             _ => (WeekStart(d), 7),
@@ -167,45 +180,60 @@ public partial class MainWindowViewModel
         }
 
         var (windowStart, dayCount) = VisibilityWindow();
+        var dayStart = DayStart ?? new TimeSpan(7, 0, 0);
+        var planToday = PlanToday;
 
-        // Разворот всех шаблонов в пункты на даты окна.
+        // Разворот всех шаблонов в пункты на даты окна; ключ - план-день:
+        // базовый старт до границы дня уходит в предыдущий день.
         var byDate = new Dictionary<DateTime, List<ScheduleItem>>();
         foreach (var t in TaskTemplates.Concat(OneTimeTasks))
         {
+            // Базовое время - тот же разворот без сдвигов; отображаемое время
+            // отличается от него только для сегодняшнего дня.
+            var baseByDate = ScheduleExpander.Expand(t, windowStart, dayCount)
+                .ToDictionary(x => x.Date, x => (x.Start, x.End));
             foreach (var (date, start, end) in ScheduleExpander.Expand(t, windowStart, dayCount, _dayOffset))
             {
+                baseByDate.TryGetValue(date, out var baseTimes);
+                var planDay = date;
+                if (ScheduleExpander.TryParseTime(baseTimes.Item1, out var bs) && bs < dayStart)
+                    planDay = date.AddDays(-1);
                 var item = new ScheduleItem
                 {
                     Date = date,
+                    PlanDay = planDay,
                     Template = t,
                     StartTime = start,
                     EndTime = end,
-                    IsDone = date == DateTime.Today && _dayOffset != null
+                    BaseStartTime = baseTimes.Item1,
+                    BaseEndTime = baseTimes.Item2,
+                    IsToday = planDay == planToday,
+                    IsDone = planDay == planToday && _dayOffset != null
                         && _dayOffset.DoneTaskIds.Contains(t.Id),
                 };
-                if (!byDate.TryGetValue(date, out var list))
-                    byDate[date] = list = new List<ScheduleItem>();
+                if (!byDate.TryGetValue(planDay, out var list))
+                    byDate[planDay] = list = new List<ScheduleItem>();
                 list.Add(item);
             }
         }
 
         // Пометка идущей таски: одна и та же запись живёт и в Day-списке,
         // и в ячейках недельной сетки.
-        var today = DateTime.Today;
         foreach (var list in byDate.Values)
             foreach (var i in list)
                 i.IsRunning = _runningTaskId != Guid.Empty
                     && i.Template.Id == _runningTaskId
-                    && i.Date == today;
+                    && i.PlanDay == planToday;
 
         // Day view: пункты выбранного дня в порядке плана — по базовому (без
-        // сдвигов) старту. Сортировка по отображаемому времени перемешивала бы
-        // таски, когда сдвиг уводит их через соседей; FixedTime тоже остаётся
-        // на своём плановом месте. Таски без времени — в конце дня.
+        // сдвигов) старту; ночные пункты (до границы дня) — в конец дня.
+        // Сортировка по отображаемому времени перемешивала бы таски, когда
+        // сдвиг уводит их через соседей; FixedTime тоже остаётся на своём
+        // плановом месте. Таски без времени — в конце дня.
         Schedule.Clear();
         if (byDate.TryGetValue(SelectedDate.Date, out var dayItems))
         {
-            foreach (var i in dayItems.OrderBy(i => BaseInterval(i).BaseStart ?? TimeSpan.MaxValue))
+            foreach (var i in dayItems.OrderBy(DayOrderKey))
                 Schedule.Add(i);
         }
 
@@ -227,9 +255,11 @@ public partial class MainWindowViewModel
         ScheduleItem Wrap(CustomEntry e, DateTime date) => new()
         {
             Date = date,
+            PlanDay = date,
             Template = new TaskTemplate { Id = e.Id, Name = e.Name, Type = TaskType.FixedTime },
             StartTime = e.StartTime,
             EndTime = e.EndTime,
+            IsToday = date == PlanToday,
             IsDone = e.IsDone,
             CustomSource = e,
         };
@@ -280,6 +310,9 @@ public partial class MainWindowViewModel
         var rawByDay = new Dictionary<DateTime, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>>();
         foreach (var (date, items) in byDate)
         {
+            // Бакет дня до начала недели (раннее утро первого дня) - не колонка сетки.
+            if (date < weekStart || date >= weekStart.AddDays(7))
+                continue;
             foreach (var item in items)
             {
                 if (!ScheduleExpander.TryParseTime(item.StartTime, out var s)
@@ -372,7 +405,7 @@ public partial class MainWindowViewModel
     // Без выбранной таски — общие интервалы строки по всем дням.
     private void UpdateTimeLabels()
     {
-        var date = SelectedItem?.Date;
+        var date = SelectedItem?.PlanDay;
         var useDay = date != null
             && _dayCellIndex != null
             && _dayCellIndex.ContainsKey(date.Value)
@@ -450,7 +483,7 @@ public partial class MainWindowViewModel
     private void NextPeriod() => ShiftPeriod(1);
 
     [RelayCommand]
-    private void GoToToday() => SelectedDate = DateTime.Today;
+    private void GoToToday() => SelectedDate = PlanToday;
 
     private void ShiftPeriod(int direction)
     {

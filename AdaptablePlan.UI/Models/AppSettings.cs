@@ -15,6 +15,15 @@ public class AppSettings
     // System = следовать системной теме (RequestedThemeVariant Default).
     public string Theme { get; set; } = "System";
 
+    // Скрыть в Day-списке столбцы с базовым (несдвинутым) временем.
+    public bool HideUnshiftedTime { get; set; }
+
+    // Граница дня "HH:mm": план-время до неё относится к предыдущему дню.
+    public string DayStart { get; set; } = "07:00";
+
+    // Свой звук окончания таски (.wav); пусто - стандартный системный.
+    public string SoundFile { get; set; } = string.Empty;
+
     public ThemeVariant ToThemeVariant() => Theme switch
     {
         "Light" => ThemeVariant.Light,

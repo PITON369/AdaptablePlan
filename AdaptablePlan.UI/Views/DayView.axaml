@@ -19,10 +19,45 @@
             <Setter Property="Background" Value="{DynamicResource DoneBackground}" />
         </Style>
     </UserControl.Styles>
-    <!-- Day view: vertical list of the selected day's items -->
-    <ListBox ItemsSource="{Binding Schedule}"
+    <!-- Day view: vertical list of the selected day's items. Заголовок и список
+         в одной shared-size области: подписи выравниваются с колонками строк -->
+    <Grid RowDefinitions="Auto,*" Grid.IsSharedSizeScope="True">
+        <Grid Grid.Row="0" Margin="0,0,0,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="BaseStart" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="BaseEnd" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Start" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="End" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Activity" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Margin="0,0,5,0"
+                       IsVisible="{Binding !HideUnshiftedTime}" Text="Plan" />
+            <TextBlock Grid.Column="1" Margin="0,0,5,0"
+                       IsVisible="{Binding !HideUnshiftedTime}" />
+            <Border Grid.Column="2" Width="1" Margin="2,0"
+                    Background="{DynamicResource WeekGridLineBrush}"
+                    IsVisible="{Binding !HideUnshiftedTime}" />
+            <TextBlock Grid.Column="3" Margin="0,0,5,0" Text="Shift" />
+            <TextBlock Grid.Column="4" Margin="0,0,5,0" />
+            <Border Grid.Column="5" Width="1" Margin="2,0"
+                    Background="{DynamicResource WeekGridLineBrush}" />
+            <TextBlock Grid.Column="6" Margin="0,0,5,0" Text="Task" />
+        </Grid>
+        <ListBox Grid.Row="1"
+             ItemsSource="{Binding Schedule}"
              SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-             Grid.IsSharedSizeScope="True">
+             DoubleTapped="OnListDoubleTapped">
+        <!-- Без виртуализации (StackPanel вместо VirtualizingStackPanel):
+             SharedSizeGroup сразу считает ширину по всем строкам, включая
+             самую длинную, и колонки не прыгают при прокрутке -->
+        <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel />
+            </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
         <ListBox.Styles>
             <Style Selector="ListBoxItem">
                 <Setter Property="Padding" Value="0" />
@@ -34,19 +69,35 @@
                 <Border Classes.running="{Binding IsRunning}" CornerRadius="2">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="BaseStart" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="BaseEnd" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="Start" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="End" />
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="Activity" />
                             <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding StartTime}" />
-                        <TextBlock Grid.Column="1" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding EndTime}" />
-                        <Border Grid.Column="2" Margin="0,0,5,0"
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Activity" />
+                            <ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <!-- Базовое время по плану: рядом со сдвинутым, чтобы
+                             видеть, откуда таска на экране; прячется настройкой -->
+                        <TextBlock Grid.Column="0" Margin="0,0,5,0" VerticalAlignment="Center"
+                                   IsVisible="{Binding !$parent[ItemsControl].DataContext.HideUnshiftedTime}"
+                                   Text="{Binding BaseStartTime}" />
+                        <TextBlock Grid.Column="1" Margin="0,0,5,0" VerticalAlignment="Center"
+                                   IsVisible="{Binding !$parent[ItemsControl].DataContext.HideUnshiftedTime}"
+                                   Text="{Binding BaseEndTime}" />
+                        <Border Grid.Column="2" Width="1" Margin="2,0"
+                                Background="{DynamicResource WeekGridLineBrush}"
+                                IsVisible="{Binding !$parent[ItemsControl].DataContext.HideUnshiftedTime}" />
+                        <TextBlock Grid.Column="3" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding StartTime}" />
+                        <TextBlock Grid.Column="4" Margin="0,0,5,0" VerticalAlignment="Center" Text="{Binding EndTime}" />
+                        <Border Grid.Column="5" Width="1" Margin="2,0"
+                                Background="{DynamicResource WeekGridLineBrush}" />
+                        <Border Grid.Column="6" Margin="0,0,5,0"
                                 Classes.done="{Binding IsDone}"
                                 CornerRadius="2">
                             <TextBlock VerticalAlignment="Center" Text="{Binding Activity}" />
                         </Border>
-                        <CheckBox Grid.Column="3" MinHeight="0" MinWidth="0" Padding="0"
+                        <CheckBox Grid.Column="7" MinHeight="0" MinWidth="0" Padding="0"
                                   VerticalAlignment="Center"
                                   IsEnabled="{Binding IsToday}"
                                   IsChecked="{Binding IsDone, Mode=OneWay}"
@@ -55,5 +106,6 @@
                 </Border>
             </DataTemplate>
         </ListBox.ItemTemplate>
-    </ListBox>
+        </ListBox>
+    </Grid>
 </UserControl>

@@ -62,6 +62,9 @@
                     IsVisible="{Binding ShowTaskButton}" />
             <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
                        FontWeight="SemiBold"
+                       Text="{Binding TimeLeftText}" />
+            <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
+                       FontWeight="SemiBold"
                        Text="{Binding SelectedTimeText}" />
             <Button Content="Edit" Margin="24,0,0,0"
                     Command="{Binding EditTaskCommand}"

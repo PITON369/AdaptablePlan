@@ -136,6 +136,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _startWeekOnMonday = true;
 
     [ObservableProperty]
+    private bool _hideUnshiftedTime;
+
+    // Граница дня: план-время до неё относится к предыдущему дню
+    // (00:01-06:59 при старте дня 07:00 - ещё вчера).
+    [ObservableProperty]
+    private TimeSpan? _dayStart = new(7, 0, 0);
+
+    // Свой звук окончания таски (.wav); пусто - стандартный системный.
+    [ObservableProperty]
+    private string _soundFile = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasValidationMessage))]
     private string _validationMessage = string.Empty;
 
     [ObservableProperty]
@@ -175,6 +188,25 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _theme = "System";
 
     partial void OnFontSizeChanged(double value) => SaveAppearance();
+    partial void OnHideUnshiftedTimeChanged(bool value) => SaveAppearance();
+    partial void OnDayStartChanged(TimeSpan? value)
+    {
+        RegenerateSchedule();
+        SaveAppearance();
+    }
+    partial void OnSoundFileChanged(string value) => SaveAppearance();
+
+    // "Сегодня" по границе дня: до DayStart утра это ещё предыдущий
+    // календарный день - его запись DayOffset и его галочки продолжают жить.
+    public DateTime PlanToday
+    {
+        get
+        {
+            var start = DayStart ?? new TimeSpan(7, 0, 0);
+            var now = DateTime.Now;
+            return now.TimeOfDay < start ? now.Date.AddDays(-1) : now.Date;
+        }
+    }
     partial void OnThemeChanged(string value)
     {
         ApplyTheme();
@@ -198,7 +230,14 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private void SaveAppearance()
-        => new Models.AppSettings { FontSize = FontSize, Theme = Theme }.Save();
+        => new Models.AppSettings
+        {
+            FontSize = FontSize,
+            Theme = Theme,
+            HideUnshiftedTime = HideUnshiftedTime,
+            DayStart = (DayStart ?? new TimeSpan(7, 0, 0)).ToString(@"hh\:mm"),
+            SoundFile = SoundFile,
+        }.Save();
 
     public bool HasValidationMessage => !string.IsNullOrEmpty(ValidationMessage);
 
@@ -223,6 +262,11 @@ public partial class MainWindowViewModel : ViewModelBase
         var settings = Models.AppSettings.Load();
         FontSize = settings.FontSize;
         Theme = settings.Theme;
+        HideUnshiftedTime = settings.HideUnshiftedTime;
+        if (TimeSpan.TryParse(settings.DayStart, out var dayStart))
+            DayStart = dayStart;
+        SoundFile = settings.SoundFile;
+        SelectedDate = PlanToday;
         SyncTaskTypeFlags();
         CurrentTask.PropertyChanged += OnCurrentTaskPropertyChanged;
         PropertyChanged += OnViewModelPropertyChanged;
@@ -387,7 +431,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => _runningTaskId != Guid.Empty && RunningItem() != null;
 
     private ScheduleItem? RunningItem()
-        => Schedule.FirstOrDefault(i => i.Template.Id == _runningTaskId && i.Date == DateTime.Today);
+        => Schedule.FirstOrDefault(i => i.Template.Id == _runningTaskId && i.PlanDay == PlanToday);
 
     [ObservableProperty]
     private bool _autoStartNextTask;
@@ -422,6 +466,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         RegenerateSchedule();
         await SaveDayOffsetAsync();
+        StartTaskTimer(item);
     }
 
     private async Task FinishRunningTaskAsync()
@@ -429,6 +474,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var item = RunningItem();
         if (item == null)
             return;
+
+        StopTaskTimer();
 
         var (baseStart, baseEnd) = BaseInterval(item);
         var nextIndex = Schedule.IndexOf(item) + 1;
@@ -464,6 +511,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _runningTaskId = nextItem.Template.Id;
             RegenerateSchedule();
             await SaveDayOffsetAsync();
+            StartTaskTimer(nextItem);
         }
     }
 
@@ -503,7 +551,7 @@ public partial class MainWindowViewModel : ViewModelBase
     // применяются только к своей дате.
     private void EnsureDayRecord()
     {
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        var today = PlanToday.ToString("yyyy-MM-dd");
         if (_dayOffset == null || _dayOffset.Date != today)
             _dayOffset = new DayOffset { Date = today };
     }
@@ -535,31 +583,40 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    // Первая таска сегодняшнего дня по базовому старту. Когда день показан
-    // (SelectedDate = сегодня) — берём реальный пункт из Schedule, иначе
-    // строим свежий экземпляр (выделение на него не вешаем: его нет в списке).
+    // Первая таска план-сегодняшнего дня: по порядку плана с учётом границы
+    // дня (ночные пункты после DayStart-времени следующего календарного дня
+    // идут в конец). Когда день показан (SelectedDate = сегодня) — берём
+    // реальный пункт из Schedule, иначе строим свежий экземпляр (выделение
+    // на него не вешаем: его нет в списке).
     private ScheduleItem? FirstTodayItem()
     {
-        var today = DateTime.Today;
+        var today = PlanToday;
+        var dayStart = DayStart ?? new TimeSpan(7, 0, 0);
         if (SelectedDate.Date == today && Mode is not (ScheduleMode.Month or ScheduleMode.Year))
             return Schedule.FirstOrDefault();
 
         ScheduleItem? first = null;
         var firstStart = TimeSpan.MaxValue;
         foreach (var t in TaskTemplates.Concat(OneTimeTasks))
-            foreach (var (date, start, end) in ScheduleExpander.Expand(t, today, 1))
+            foreach (var (date, start, end) in ScheduleExpander.Expand(t, today, 2))
             {
-                if (date != today || !ScheduleExpander.TryParseTime(start, out var ts) || ts >= firstStart)
+                if (!ScheduleExpander.TryParseTime(start, out var ts))
                     continue;
-                firstStart = ts;
-                first = new ScheduleItem { Date = date, Template = t, StartTime = start, EndTime = end };
+                var planDay = ts < dayStart ? date.AddDays(-1) : date;
+                if (planDay != today)
+                    continue;
+                var key = ts < dayStart ? ts.Add(TimeSpan.FromHours(24)) : ts;
+                if (key >= firstStart)
+                    continue;
+                firstStart = key;
+                first = new ScheduleItem { Date = date, PlanDay = planDay, Template = t, StartTime = start, EndTime = end };
             }
         return first;
     }
 
     private void RestoreDayState()
     {
-        if (_dayOffset != null && _dayOffset.Date == DateTime.Today.ToString("yyyy-MM-dd"))
+        if (_dayOffset != null && _dayOffset.Date == PlanToday.ToString("yyyy-MM-dd"))
             _runningTaskId = _dayOffset.RunningTaskId;
         RegenerateSchedule();
         OnPropertyChanged(nameof(TaskActionText));

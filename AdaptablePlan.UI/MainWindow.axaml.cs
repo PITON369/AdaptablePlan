@@ -45,16 +45,20 @@ public partial class MainWindow : Window
             UpdatePage();
     }
 
-    // Одна активная вьюха: форма задачи > настройки > главная.
+    // Одна активная вьюха: настройки > главная; форма задачи - панелью справа
+    // поверх главной, расписание остаётся видно.
     private void UpdatePage()
     {
         if (_vm is null)
             return;
 
-        PageHost.Content = _vm.IsNewTaskOpen
-            ? (object)new NewTaskEntryView()
-            : _vm.IsSettingsOpen
-                ? new SettingsView()
-                : new MainView();
+        PageHost.Content = _vm.IsSettingsOpen
+            ? (object)new SettingsView()
+            : new MainView();
+
+        var editOpen = _vm.IsNewTaskOpen;
+        EditPanel.IsVisible = editOpen;
+        InputBlocker.IsVisible = editOpen;
+        EditHost.Content = editOpen ? new NewTaskEntryView() : null;
     }
 }
