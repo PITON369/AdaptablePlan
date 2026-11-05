@@ -1,4 +1,5 @@
 using AdaptablePlan.Core.Models;
+using AdaptablePlan.UI.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
@@ -77,13 +78,13 @@ public partial class CustomPageViewModel : ObservableObject
 
     internal static string DayName(DayOfWeek day) => day switch
     {
-        DayOfWeek.Monday => "Mon",
-        DayOfWeek.Tuesday => "Tue",
-        DayOfWeek.Wednesday => "Wed",
-        DayOfWeek.Thursday => "Thu",
-        DayOfWeek.Friday => "Fri",
-        DayOfWeek.Saturday => "Sat",
-        _ => "Sun",
+        DayOfWeek.Monday => Strings.Get("Mon"),
+        DayOfWeek.Tuesday => Strings.Get("Tue"),
+        DayOfWeek.Wednesday => Strings.Get("Wed"),
+        DayOfWeek.Thursday => Strings.Get("Thu"),
+        DayOfWeek.Friday => Strings.Get("Fri"),
+        DayOfWeek.Saturday => Strings.Get("Sat"),
+        _ => Strings.Get("Sun"),
     };
 
     public string NoteText
@@ -115,6 +116,8 @@ public partial class CustomPageViewModel : ObservableObject
         Entries.Remove(entry);
         Save();
     }
+
+    public void RefreshBindings() => OnPropertyChanged(string.Empty);
 }
 
 public partial class CustomEntryViewModel : ObservableObject
@@ -126,6 +129,8 @@ public partial class CustomEntryViewModel : ObservableObject
         Model = model;
         _owner = owner;
     }
+
+    public void RefreshBindings() => OnPropertyChanged(string.Empty);
 
     public CustomEntry Model { get; }
 

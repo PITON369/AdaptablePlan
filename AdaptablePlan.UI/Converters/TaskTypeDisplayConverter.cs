@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using AdaptablePlan.Core.Models;
+using AdaptablePlan.UI.Localization;
 using Avalonia.Data.Converters;
 
 namespace AdaptablePlan.UI.Converters;
@@ -11,10 +12,10 @@ public class TaskTypeDisplayConverter : IValueConverter
     {
         return value switch
         {
-            TaskType.Recurring => "Recurring",
-            TaskType.FixedTime => "Fixed Time",
-            TaskType.Things => "Things",
-            TaskType.OneTime => "One Time (Things)",
+            TaskType.Recurring => Strings.Get("TypeRecurring"),
+            TaskType.FixedTime => Strings.Get("TypeFixedTime"),
+            TaskType.Things => Strings.Get("TypeThings"),
+            TaskType.OneTime => Strings.Get("TypeOneTime"),
             _ => value?.ToString()
         };
     }

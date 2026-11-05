@@ -1,6 +1,7 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
 using AdaptablePlan.Core.Settings;
+using AdaptablePlan.UI.Localization;
 using AdaptablePlan.UI.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -165,7 +166,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public IEnumerable<TaskType> TaskTypes => Enum.GetValues<TaskType>();
 
     [ObservableProperty]
-    private string _appStatus = "Loading...";
+    private string _appStatus = Strings.Get("StatusLoading");
 
     // Сервер БД недоступен, но данные загружены из локальной SQLite-копии —
     // жёлтый баннер на весь верх окна.
@@ -186,6 +187,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _theme = "System";
+
+    [ObservableProperty]
+    private string _language = "System";
 
     partial void OnFontSizeChanged(double value) => SaveAppearance();
     partial void OnHideUnshiftedTimeChanged(bool value) => SaveAppearance();
@@ -213,6 +217,12 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveAppearance();
     }
 
+    partial void OnLanguageChanged(string value)
+    {
+        Strings.SetLanguage(new Models.AppSettings { Language = value }.ToLanguageCode());
+        SaveAppearance();
+    }
+
     private void ApplyTheme()
     {
         var app = Application.Current;
@@ -234,6 +244,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             FontSize = FontSize,
             Theme = Theme,
+            Language = Language,
             HideUnshiftedTime = HideUnshiftedTime,
             DayStart = (DayStart ?? new TimeSpan(7, 0, 0)).ToString(@"hh\:mm"),
             SoundFile = SoundFile,
@@ -245,8 +256,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         InitCommon();
-        LoadDefaultData("Default data — no database");
+        LoadDefaultData("StatusDefaultNoDb");
         ApplyCustomPages(DefaultCustomPages());
+        ApplyPlanPages(DefaultPlanPages());
     }
 
     public MainWindowViewModel(IAdaptablePlanDb db, DbType dbType, SqliteDbSettings sqliteSettings)
@@ -262,6 +274,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var settings = Models.AppSettings.Load();
         FontSize = settings.FontSize;
         Theme = settings.Theme;
+        Language = settings.Language;
         HideUnshiftedTime = settings.HideUnshiftedTime;
         if (TimeSpan.TryParse(settings.DayStart, out var dayStart))
             DayStart = dayStart;
@@ -270,6 +283,8 @@ public partial class MainWindowViewModel : ViewModelBase
         SyncTaskTypeFlags();
         CurrentTask.PropertyChanged += OnCurrentTaskPropertyChanged;
         PropertyChanged += OnViewModelPropertyChanged;
+        Strings.Changed += OnStringsChanged;
+        RecomputeStatusTexts();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -301,10 +316,10 @@ public partial class MainWindowViewModel : ViewModelBase
     // Краткая подсказка про выбранный тип в редакторе таски.
     public string CurrentTaskTypeDescription => CurrentTask.Type switch
     {
-        TaskType.Recurring => "Repeats on a schedule (days of week, daily, ...). End = start + duration. Time shifts when the day or a task starts late.",
-        TaskType.FixedTime => "Fixed start and end times. Never shifts.",
-        TaskType.Things => "A thing to do on chosen days, with a duration. Shifts like recurring tasks.",
-        TaskType.OneTime => "One-time task on a specific date, without a time slot.",
+        TaskType.Recurring => Strings.Get("DescRecurring"),
+        TaskType.FixedTime => Strings.Get("DescFixedTime"),
+        TaskType.Things => Strings.Get("DescThings"),
+        TaskType.OneTime => Strings.Get("DescOneTime"),
         _ => string.Empty,
     };
 
@@ -327,13 +342,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
             LoadTemplates(templates);
             LoadCustomPages(db);
+            LoadPlanPages(db);
             _dayOffset = db.DayOffsets.GetAllAsync().GetAwaiter().GetResult().FirstOrDefault();
             RestoreDayState();
             IsServerDown = false;
             IsDatabaseError = false;
-            AppStatus = dbType == DbType.Sqlite
-                ? "Data loaded from local database"
-                : "Data loaded from server database";
+            SetStatus(dbType == DbType.Sqlite ? "StatusLocalDb" : "StatusServerDb");
         }
         catch
         {
@@ -344,15 +358,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     LoadTemplates(backup.Value.Templates);
                     ApplyCustomPages(backup.Value.Pages.Count > 0 ? backup.Value.Pages : DefaultCustomPages());
+                    ApplyPlanPages(DefaultPlanPages());
                     _dayOffset = backup.Value.DayOffsets.FirstOrDefault();
                     RestoreDayState();
                     IsServerDown = true;
                     IsDatabaseError = false;
                     var stamp = SqliteBackup.ReadLastBackupDate(_sqlitePath);
                     var from = string.IsNullOrEmpty(stamp) ? "" : $" (backup from {stamp})";
-                    DbBannerText =
-                        $"Database server unreachable — using local backup copy{from}. Changes are NOT saved!";
-                    AppStatus = "Data loaded from local backup (server unavailable)";
+                    _backupStamp = from;
+                    DbBannerText = Strings.Format("BannerBackup", from);
+                    SetStatus("StatusBackup");
                     return;
                 }
             }
@@ -362,8 +377,9 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             IsDatabaseError = true;
-            DbBannerText = "No database available — showing default data. Changes are NOT saved!";
-            LoadDefaultData("Default data — no database available");
+            DbBannerText = Strings.Get("BannerNoDb");
+            LoadDefaultData("StatusDefaultNoDbAvailable");
+            ApplyPlanPages(DefaultPlanPages());
         }
     }
 
@@ -376,14 +392,14 @@ public partial class MainWindowViewModel : ViewModelBase
         RegenerateSchedule();
     }
 
-    private void LoadDefaultData(string statusText)
+    private void LoadDefaultData(string statusKey)
     {
         TaskTemplates.Clear();
         OneTimeTasks.Clear();
         foreach (var t in DefaultTaskTemplates())
             TaskTemplates.Add(t);
         RegenerateSchedule();
-        AppStatus = statusText;
+        SetStatus(statusKey);
     }
 
     // --- Commands ---
@@ -394,7 +410,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
 
         LoadTemplates(_db.TaskTemplates.GetAllAsync().GetAwaiter().GetResult());
-        AppStatus = "Refreshed from database";
+        SetStatus("StatusRefreshed");
     }
 
     // --- Start/Finish Task ---
@@ -423,7 +439,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public string TaskActionText
-        => IsTaskRunning ? "Finish Task" : SelectedItem != null ? "Start Task" : "Start First Task";
+        => IsTaskRunning ? Strings.Get("FinishTask") : SelectedItem != null ? Strings.Get("StartTask") : Strings.Get("StartFirstTask");
 
     public bool CanToggleTask => IsTaskRunning || SelectedItem != null || FirstTodayItem() != null;
 
@@ -627,6 +643,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OpenSettings()
     {
         ConfirmDeleteDb = false;
+        IsPlanOpen = false;
         IsSettingsOpen = true;
     }
 
@@ -657,13 +674,18 @@ public partial class MainWindowViewModel : ViewModelBase
             var pages = DefaultCustomPages();
             foreach (var p in pages)
                 await _db.CustomPages.InsertAsync(p);
+            var planPages = DefaultPlanPages();
+            foreach (var p in planPages)
+                await _db.PlanPages.InsertAsync(p);
             LoadTemplates(templates);
             ApplyCustomPages(pages);
+            ApplyPlanPages(planPages);
         }
         else
         {
-            LoadDefaultData("Database cleared — defaults restored");
+            LoadDefaultData("StatusCleared");
             ApplyCustomPages(DefaultCustomPages());
+            ApplyPlanPages(DefaultPlanPages());
         }
         ConfirmDeleteDb = false;
         IsSettingsOpen = false;

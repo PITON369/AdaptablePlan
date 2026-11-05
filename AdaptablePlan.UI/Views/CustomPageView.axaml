@@ -4,12 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
              xmlns:views="using:AdaptablePlan.UI.Views"
+             xmlns:converters="using:AdaptablePlan.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
              x:Class="AdaptablePlan.UI.Views.CustomPageView"
              x:DataType="vm:MainWindowViewModel">
     <!-- CheckBoxMinHeight: перекрытие ресурса темы Fluent (там 32) — компактные строки -->
     <UserControl.Resources>
         <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
+        <converters:PageViewTypeDisplayConverter x:Key="PageViewTypeDisplayConverter" />
     </UserControl.Resources>
     <UserControl.Styles>
         <Style Selector="Border.done">
@@ -26,12 +28,18 @@
             <TextBox Width="200" Text="{Binding SelectedCustomPage.Name, Mode=TwoWay}" />
             <ComboBox Width="110"
                       ItemsSource="{Binding SelectedCustomPage.ViewTypes}"
-                      SelectedItem="{Binding SelectedCustomPage.ViewType, Mode=TwoWay}" />
-            <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
+                      SelectedItem="{Binding SelectedCustomPage.ViewType, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={StaticResource PageViewTypeDisplayConverter}}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Content="{DynamicResource Save}" Command="{Binding SaveSelectedPageCommand}" />
             <!-- Edit виден только в отчёте: возвращает к редактированию -->
-            <Button Content="Edit" Command="{Binding EditCustomPageCommand}"
+            <Button Content="{DynamicResource Edit}" Command="{Binding EditCustomPageCommand}"
                     IsVisible="{Binding !IsCustomEditor}" />
-            <Button Content="Clear" Command="{Binding ClearSelectedPageCommand}" />
+            <Button Content="{DynamicResource Clear}" Command="{Binding ClearSelectedPageCommand}" />
         </StackPanel>
 
         <!-- Editor: type-specific editing UI -->
@@ -74,10 +82,10 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                    <TextBox MinWidth="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
-                    <TextBox MinWidth="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
-                    <TextBox MinWidth="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
-                    <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource Start}" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource End}" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                    <TextBox MinWidth="220" PlaceholderText="{DynamicResource NewItem}" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                    <Button Content="{DynamicResource Add}" Command="{Binding AddCustomEntryCommand}" />
                 </StackPanel>
             </StackPanel>
 
@@ -116,13 +124,13 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                    <TextBox MinWidth="60" PlaceholderText="Start" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
-                    <TextBox MinWidth="60" PlaceholderText="End" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource Start}" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource End}" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
                     <ComboBox MinWidth="100"
                               ItemsSource="{Binding WeekDays}"
                               SelectedItem="{Binding NewCustomEntryDay, Mode=TwoWay}" />
-                    <TextBox MinWidth="220" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
-                    <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+                    <TextBox MinWidth="220" PlaceholderText="{DynamicResource NewItem}" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                    <Button Content="{DynamicResource Add}" Command="{Binding AddCustomEntryCommand}" />
                 </StackPanel>
             </StackPanel>
 
@@ -130,7 +138,7 @@
             <TextBlock IsVisible="{Binding SelectedCustomPage.IsMonthView}"
                        HorizontalAlignment="Left" Margin="0,16,0,0"
                        FontSize="16" Opacity="0.6"
-                       Text="Month view — placeholder" />
+                       Text="{DynamicResource MonthPlaceholder}" />
 
             <!-- List / Year: checklist -->
             <StackPanel IsVisible="{Binding SelectedCustomPage.IsChecklistView}" Spacing="4">
@@ -146,8 +154,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                    <TextBox Width="280" PlaceholderText="New item" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
-                    <Button Content="Add" Command="{Binding AddCustomEntryCommand}" />
+                    <TextBox Width="280" PlaceholderText="{DynamicResource NewItem}" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
+                    <Button Content="{DynamicResource Add}" Command="{Binding AddCustomEntryCommand}" />
                 </StackPanel>
             </StackPanel>
 
@@ -155,7 +163,7 @@
             <StackPanel IsVisible="{Binding SelectedCustomPage.IsNoteView}" Spacing="4">
                 <TextBox Height="320" AcceptsReturn="True" TextWrapping="Wrap"
                          Text="{Binding SelectedCustomPage.NoteText, Mode=TwoWay}" />
-                <Button Content="Save" Command="{Binding SaveSelectedPageCommand}" />
+                <Button Content="{DynamicResource Save}" Command="{Binding SaveSelectedPageCommand}" />
             </StackPanel>
         </StackPanel>
 

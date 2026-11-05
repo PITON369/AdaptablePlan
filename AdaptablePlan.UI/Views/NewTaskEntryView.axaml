@@ -19,10 +19,10 @@
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <TextBlock FontWeight="SemiBold" FontSize="18"
                        IsVisible="{Binding !IsEditing}"
-                       Text="New Task" />
+                       Text="{DynamicResource NewTaskHeader}" />
             <TextBlock FontWeight="SemiBold" FontSize="18"
                        IsVisible="{Binding IsEditing}"
-                       Text="Edit Task" />
+                       Text="{DynamicResource EditTaskHeader}" />
         </StackPanel>
 
         <TextBlock Text="{Binding ValidationMessage}"
@@ -31,7 +31,7 @@
                    IsVisible="{Binding HasValidationMessage}" />
 
         <StackPanel Spacing="4">
-            <TextBlock Text="Type" />
+            <TextBlock Text="{DynamicResource Type}" />
             <ComboBox ItemsSource="{Binding TaskTypes}"
                       SelectedValue="{Binding CurrentTask.Type}">
                 <ComboBox.ItemTemplate>
@@ -47,21 +47,21 @@
         </StackPanel>
 
         <StackPanel Spacing="4">
-            <TextBlock Text="Name" />
+            <TextBlock Text="{DynamicResource Name}" />
             <TextBox Text="{Binding CurrentTask.Name}" />
         </StackPanel>
 
         <StackPanel Spacing="4" IsVisible="{Binding ShowDuration}">
-            <TextBlock Text="Duration (min)" />
+            <TextBlock Text="{DynamicResource DurationMin}" />
             <TextBox Text="{Binding DurationText}"
-                     PlaceholderText="e.g. 30" />
+                     PlaceholderText="{DynamicResource DurationPlaceholder}" />
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding ShowTimeVariants}">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock FontWeight="SemiBold" Text="Times"
+                <TextBlock FontWeight="SemiBold" Text="{DynamicResource Times}"
                            VerticalAlignment="Center" />
-                <Button Content="Add time"
+                <Button Content="{DynamicResource AddTime}"
                         Command="{Binding AddTimeVariantCommand}" />
             </StackPanel>
             <ItemsControl ItemsSource="{Binding TimeVariants}">
@@ -69,24 +69,24 @@
                     <DataTemplate x:DataType="vm:TaskTimeVariantViewModel">
                         <StackPanel Spacing="2" Margin="0,0,0,4">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Start" VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource Start}" VerticalAlignment="Center" />
                                 <TimePicker SelectedTime="{Binding StartValue, Mode=TwoWay}"
                                             ClockIdentifier="24HourClock" />
-                                <TextBlock Text="End" VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource End}" VerticalAlignment="Center" />
                                 <TimePicker SelectedTime="{Binding EndValue, Mode=TwoWay}"
                                             ClockIdentifier="24HourClock" />
-                                <Button Content="Remove"
+                                <Button Content="{DynamicResource Remove}"
                                         Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTimeVariantCommand}"
                                         CommandParameter="{Binding}" />
                             </StackPanel>
                             <UniformGrid Rows="1" Columns="7" Margin="0,2,0,0">
-                                <CheckBox Content="Mon" IsChecked="{Binding Mon}" />
-                                <CheckBox Content="Tue" IsChecked="{Binding Tue}" />
-                                <CheckBox Content="Wed" IsChecked="{Binding Wed}" />
-                                <CheckBox Content="Thu" IsChecked="{Binding Thu}" />
-                                <CheckBox Content="Fri" IsChecked="{Binding Fri}" />
-                                <CheckBox Content="Sat" IsChecked="{Binding Sat}" />
-                                <CheckBox Content="Sun" IsChecked="{Binding Sun}" />
+                                <CheckBox Content="{DynamicResource Mon}" IsChecked="{Binding Mon}" />
+                                <CheckBox Content="{DynamicResource Tue}" IsChecked="{Binding Tue}" />
+                                <CheckBox Content="{DynamicResource Wed}" IsChecked="{Binding Wed}" />
+                                <CheckBox Content="{DynamicResource Thu}" IsChecked="{Binding Thu}" />
+                                <CheckBox Content="{DynamicResource Fri}" IsChecked="{Binding Fri}" />
+                                <CheckBox Content="{DynamicResource Sat}" IsChecked="{Binding Sat}" />
+                                <CheckBox Content="{DynamicResource Sun}" IsChecked="{Binding Sun}" />
                             </UniformGrid>
                         </StackPanel>
                     </DataTemplate>
@@ -95,11 +95,11 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="Cancel" Command="{Binding CancelNewTaskCommand}" />
-            <Button Content="Save" Command="{Binding SaveNewTaskCommand}"
+            <Button Content="{DynamicResource Cancel}" Command="{Binding CancelNewTaskCommand}" />
+            <Button Content="{DynamicResource Save}" Command="{Binding SaveNewTaskCommand}"
                     IsVisible="{Binding !IsEditing}"
                     IsDefault="True" />
-            <Button Content="Update" Command="{Binding SaveNewTaskCommand}"
+            <Button Content="{DynamicResource Update}" Command="{Binding SaveNewTaskCommand}"
                     IsVisible="{Binding IsEditing}"
                     IsDefault="True" />
         </StackPanel>

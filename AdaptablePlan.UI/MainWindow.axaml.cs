@@ -41,7 +41,8 @@ public partial class MainWindow : Window
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainWindowViewModel.IsNewTaskOpen)
-            or nameof(MainWindowViewModel.IsSettingsOpen))
+            or nameof(MainWindowViewModel.IsSettingsOpen)
+            or nameof(MainWindowViewModel.IsPlanOpen))
             UpdatePage();
     }
 
@@ -52,9 +53,11 @@ public partial class MainWindow : Window
         if (_vm is null)
             return;
 
-        PageHost.Content = _vm.IsSettingsOpen
-            ? (object)new SettingsView()
-            : new MainView();
+        PageHost.Content = _vm.IsPlanOpen
+            ? (object)new PlanView()
+            : _vm.IsSettingsOpen
+                ? (object)new SettingsView()
+                : new MainView();
 
         var editOpen = _vm.IsNewTaskOpen;
         EditPanel.IsVisible = editOpen;

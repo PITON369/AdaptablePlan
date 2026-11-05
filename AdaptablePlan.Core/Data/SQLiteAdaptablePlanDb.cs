@@ -41,6 +41,7 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
     private readonly Lazy<IRepository<ScheduleEntry>> _scheduleEntries;
     private readonly Lazy<IRepository<CustomPage>> _customPages;
     private readonly Lazy<IRepository<DayOffset>> _dayOffsets;
+    private readonly Lazy<IRepository<PlanPage>> _planPages;
 
     public SQLiteAdaptablePlanDb(string dbPath)
     {
@@ -49,12 +50,14 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
         _scheduleEntries = new(() => new SqliteRepository<ScheduleEntry>(this, "ScheduleEntries"));
         _customPages = new(() => new SqliteRepository<CustomPage>(this, "CustomPages"));
         _dayOffsets = new(() => new SqliteRepository<DayOffset>(this, "DayOffsets"));
+        _planPages = new(() => new SqliteRepository<PlanPage>(this, "PlanPages"));
     }
 
     public IRepository<TaskTemplate> TaskTemplates => _taskTemplates.Value;
     public IRepository<ScheduleEntry> ScheduleEntries => _scheduleEntries.Value;
     public IRepository<CustomPage> CustomPages => _customPages.Value;
     public IRepository<DayOffset> DayOffsets => _dayOffsets.Value;
+    public IRepository<PlanPage> PlanPages => _planPages.Value;
 
     public async Task EnsureCreatedAsync(CancellationToken ct = default)
     {
@@ -103,6 +106,17 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
             """;
             await cmd.ExecuteNonQueryAsync(ct);
         }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS PlanPages (
+                    Id TEXT PRIMARY KEY,
+                    Body TEXT NOT NULL
+                )
+            """;
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
     }
 
     internal async Task<string?> FindIdAsync(string table, string id, CancellationToken ct)
@@ -117,7 +131,7 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
     public async Task ClearAsync(CancellationToken ct = default)
     {
         var conn = Connection;
-        foreach (var table in new[] { "TaskTemplates", "ScheduleEntries", "CustomPages", "DayOffsets" })
+        foreach (var table in new[] { "TaskTemplates", "ScheduleEntries", "CustomPages", "DayOffsets", "PlanPages" })
         {
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $"DELETE FROM {table}";

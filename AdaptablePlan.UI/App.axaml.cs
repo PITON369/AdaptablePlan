@@ -18,6 +18,7 @@ public partial class App : Application
         {
             var settings = Models.AppSettings.Load();
             RequestedThemeVariant = settings.ToThemeVariant();
+            Localization.Strings.SetLanguage(settings.ToLanguageCode());
             desktop.MainWindow = new MainWindow
             {
                 DataContext = ViewModelLocator.MainWindow,

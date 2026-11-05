@@ -1,5 +1,6 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
+using AdaptablePlan.UI.Localization;
 using AdaptablePlan.UI.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -466,13 +467,13 @@ public partial class MainWindowViewModel
 
     private static string ShortDayName(DayOfWeek day) => day switch
     {
-        DayOfWeek.Monday => "Mon",
-        DayOfWeek.Tuesday => "Tue",
-        DayOfWeek.Wednesday => "Wed",
-        DayOfWeek.Thursday => "Thu",
-        DayOfWeek.Friday => "Fri",
-        DayOfWeek.Saturday => "Sat",
-        _ => "Sun",
+        DayOfWeek.Monday => Strings.Get("Mon"),
+        DayOfWeek.Tuesday => Strings.Get("Tue"),
+        DayOfWeek.Wednesday => Strings.Get("Wed"),
+        DayOfWeek.Thursday => Strings.Get("Thu"),
+        DayOfWeek.Friday => Strings.Get("Fri"),
+        DayOfWeek.Saturday => Strings.Get("Sat"),
+        _ => Strings.Get("Sun"),
     };
 
     // --- Navigation commands ---

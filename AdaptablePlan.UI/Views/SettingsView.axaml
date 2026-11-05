@@ -4,68 +4,91 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             xmlns:converters="using:AdaptablePlan.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
              x:Class="AdaptablePlan.UI.Views.SettingsView"
              x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <converters:ThemeDisplayConverter x:Key="ThemeDisplayConverter" />
+        <converters:LanguageDisplayConverter x:Key="LanguageDisplayConverter" />
+    </UserControl.Resources>
     <StackPanel Spacing="12" VerticalAlignment="Top" Margin="16">
-        <TextBlock FontWeight="SemiBold" FontSize="18" Text="Settings" />
+        <TextBlock FontWeight="SemiBold" FontSize="18" Text="{DynamicResource SettingsHeader}" />
 
         <StackPanel Spacing="8">
-            <TextBlock FontWeight="SemiBold" Text="Schedule" />
-            <CheckBox Content="Auto-start next task after finishing one"
+            <TextBlock FontWeight="SemiBold" Text="{DynamicResource ScheduleSection}" />
+            <CheckBox Content="{DynamicResource AutoStartNext}"
                       IsChecked="{Binding AutoStartNextTask, Mode=TwoWay}" />
-            <CheckBox Content="Hide unshifted time columns in Day view"
+            <CheckBox Content="{DynamicResource HideUnshifted}"
                       IsChecked="{Binding HideUnshiftedTime, Mode=TwoWay}" />
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <!-- План-время до границы дня относится к предыдущему дню -->
-                <TextBlock Width="90" VerticalAlignment="Center" Text="Day starts at" />
+                <TextBlock Width="90" VerticalAlignment="Center" Text="{DynamicResource DayStartsAt}" />
                 <TimePicker SelectedTime="{Binding DayStart, Mode=TwoWay}"
                             ClockIdentifier="24HourClock" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <!-- Пусто - стандартный системный звук окончания -->
-                <TextBlock Width="90" VerticalAlignment="Center" Text="Time-up sound" />
+                <TextBlock Width="90" VerticalAlignment="Center" Text="{DynamicResource TimeupSound}" />
                 <TextBox Text="{Binding SoundFile}" Width="220" />
-                <Button Content="Browse..." Click="OnBrowseSound" />
+                <Button Content="{DynamicResource Browse}" Click="OnBrowseSound" />
             </StackPanel>
         </StackPanel>
 
         <StackPanel Spacing="8">
-            <TextBlock FontWeight="SemiBold" Text="Appearance" />
+            <TextBlock FontWeight="SemiBold" Text="{DynamicResource Appearance}" />
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock MinWidth="90" VerticalAlignment="Center" Text="Font size" />
+                <TextBlock MinWidth="90" VerticalAlignment="Center" Text="{DynamicResource FontSize}" />
                 <Slider Minimum="10" Maximum="24" Width="150"
                         Value="{Binding FontSize, Mode=TwoWay}" />
                 <TextBlock VerticalAlignment="Center" Text="{Binding FontSize, StringFormat={}{0:0}}" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Width="90" VerticalAlignment="Center" Text="Theme" />
+                <TextBlock Width="90" VerticalAlignment="Center" Text="{DynamicResource Theme}" />
                 <ComboBox SelectedItem="{Binding Theme, Mode=TwoWay}" Width="150">
                     <sys:String>System</sys:String>
                     <sys:String>Light</sys:String>
                     <sys:String>Dark</sys:String>
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource ThemeDisplayConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Width="90" VerticalAlignment="Center" Text="{DynamicResource Language}" />
+                <ComboBox SelectedItem="{Binding Language, Mode=TwoWay}" Width="150">
+                    <sys:String>System</sys:String>
+                    <sys:String>English</sys:String>
+                    <sys:String>Russian</sys:String>
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource LanguageDisplayConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
                 </ComboBox>
             </StackPanel>
         </StackPanel>
 
         <StackPanel Spacing="8">
-            <TextBlock FontWeight="SemiBold" Text="Database" />
-            <Button Content="Delete database"
+            <TextBlock FontWeight="SemiBold" Text="{DynamicResource Database}" />
+            <Button Content="{DynamicResource DeleteDatabase}"
                     HorizontalAlignment="Left"
                     Command="{Binding RequestDeleteDatabaseCommand}" />
 
             <StackPanel Orientation="Horizontal" Spacing="8"
                         IsVisible="{Binding ConfirmDeleteDb}">
-                <TextBlock Text="Delete all data? This cannot be undone."
+                <TextBlock Text="{DynamicResource DeleteConfirm}"
                            VerticalAlignment="Center" />
-                <Button Content="Yes, delete"
+                <Button Content="{DynamicResource YesDelete}"
                         Command="{Binding DeleteDatabaseCommand}" />
-                <Button Content="Cancel"
+                <Button Content="{DynamicResource Cancel}"
                         Command="{Binding CancelDeleteDatabaseCommand}" />
             </StackPanel>
         </StackPanel>
 
-        <Button Content="Close" HorizontalAlignment="Right"
+        <Button Content="{DynamicResource Close}" HorizontalAlignment="Right"
                 Command="{Binding CloseSettingsCommand}" />
     </StackPanel>
 </UserControl>

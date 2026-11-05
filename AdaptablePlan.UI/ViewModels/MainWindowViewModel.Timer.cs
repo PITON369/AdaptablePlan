@@ -1,3 +1,4 @@
+using AdaptablePlan.UI.Localization;
 using AdaptablePlan.UI.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -60,10 +61,10 @@ public partial class MainWindowViewModel
     {
         var left = _timerTarget - DateTime.Now;
         TimeLeftText = left > TimeSpan.Zero
-            ? "Time left: " + (left >= TimeSpan.FromHours(1)
+            ? Strings.Get("TimeLeft") + (left >= TimeSpan.FromHours(1)
                 ? left.ToString(@"h\:mm\:ss")
                 : left.ToString(@"mm\:ss"))
-            : "Time left: 00:00";
+            : Strings.Get("TimeLeft") + "00:00";
     }
 
     private void OnTimerTick()

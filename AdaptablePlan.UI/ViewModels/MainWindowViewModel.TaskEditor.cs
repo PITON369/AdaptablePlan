@@ -1,5 +1,6 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
+using AdaptablePlan.UI.Localization;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
@@ -141,7 +142,7 @@ public partial class MainWindowViewModel
     private string? ValidateTask(TaskTemplate task)
     {
         if (string.IsNullOrWhiteSpace(task.Name))
-            return "Enter a task name.";
+            return Strings.Get("ValName");
 
         // Длительность нужна, только если у какого-то интервала нет явного
         // конца: ScheduleExpander берёт EndTime, когда он задан.
@@ -149,27 +150,27 @@ public partial class MainWindowViewModel
             && TimeVariants.Any(v => v.EndValue is null))
         {
             if (!int.TryParse(DurationText.Trim(), out var minutes) || minutes <= 0)
-                return "Duration must be a positive whole number of minutes (e.g. 30).";
+                return Strings.Get("ValDuration");
         }
 
         if (task.Type != TaskType.OneTime)
         {
             if (TimeVariants.Count == 0)
-                return "Add at least one time (days + start).";
+                return Strings.Get("ValAddTime");
 
             foreach (var v in TimeVariants)
             {
                 if (v.StartValue is null)
-                    return "Select a start time for every time slot.";
+                    return Strings.Get("ValStartMissing");
                 if (task.Type == TaskType.FixedTime)
                 {
                     if (v.EndValue is null)
-                        return "Select an end time for every time slot.";
+                        return Strings.Get("ValEndMissing");
                     if (v.EndValue <= v.StartValue)
-                        return "End time must be later than start time.";
+                        return Strings.Get("ValEndAfterStart");
                 }
                 if (!v.HasAnyDay)
-                    return "Select at least one day for every time slot.";
+                    return Strings.Get("ValDayMissing");
             }
         }
 
@@ -197,7 +198,7 @@ public partial class MainWindowViewModel
 
                 if (cs.Value < te.Value && ts.Value < ce.Value)
                 {
-                    var baseText = $"Time overlaps with '{t.Name}' on {ShortDayName(day)}";
+                    var baseText = Strings.Format("OverlapOn", t.Name, ShortDayName(day));
                     // Сегодняшний день идёт со сдвигом: в скобках время по плану,
                     // рядом - как таска стоит на экране сейчас.
                     if (day == DateTime.Today.DayOfWeek && _dayOffset != null)

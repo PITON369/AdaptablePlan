@@ -1,5 +1,6 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
+using AdaptablePlan.UI.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -19,6 +20,9 @@ public partial class MainWindowViewModel
     public ObservableCollection<CustomPageViewModel> CustomPageList { get; } = new();
 
     public CustomPageViewModel? YearPage { get; private set; }
+
+    // Служебная страница чек-листа планов месяца (Slot = -1), как Year (Slot 0).
+    public CustomPageViewModel? MonthPage { get; private set; }
 
     [ObservableProperty]
     private CustomPageViewModel? _selectedCustomPage;
@@ -77,6 +81,7 @@ public partial class MainWindowViewModel
         var pages = new List<CustomPage>
         {
             new() { Id = Guid.NewGuid(), Slot = 0, Name = "Year", ViewType = PageViewType.Year },
+            new() { Id = Guid.NewGuid(), Slot = -1, Name = "Month", ViewType = PageViewType.List },
         };
         for (int i = 1; i <= 10; i++)
             pages.Add(new CustomPage { Id = Guid.NewGuid(), Slot = i, Name = $"Custom {i}", ViewType = types[i - 1] });
@@ -85,12 +90,19 @@ public partial class MainWindowViewModel
 
     private void LoadCustomPages(IAdaptablePlanDb db)
     {
-        var pages = db.CustomPages.GetAllAsync().GetAwaiter().GetResult();
+        var pages = db.CustomPages.GetAllAsync().GetAwaiter().GetResult().ToList();
         if (pages.Count == 0)
         {
             pages = DefaultCustomPages();
             foreach (var p in pages)
                 db.CustomPages.InsertAsync(p).GetAwaiter().GetResult();
+        }
+        // Страница месяца добавлена позже дефолтных — досеваем при отсутствии.
+        else if (pages.All(p => p.Slot != -1))
+        {
+            var month = DefaultCustomPages().First(p => p.Slot == -1);
+            db.CustomPages.InsertAsync(month).GetAwaiter().GetResult();
+            pages.Add(month);
         }
         ApplyCustomPages(pages);
     }
@@ -100,6 +112,7 @@ public partial class MainWindowViewModel
         CustomPages.Clear();
         CustomPageList.Clear();
         YearPage = null;
+        MonthPage = null;
         foreach (var p in pages.OrderBy(p => p.Slot))
         {
             var vm = new CustomPageViewModel(p, SaveCustomPage);
@@ -116,6 +129,8 @@ public partial class MainWindowViewModel
             };
             if (p.Slot == 0)
                 YearPage = vm;
+            else if (p.Slot == -1)
+                MonthPage = vm;
             else
                 CustomPages.Add(vm);
         }
@@ -124,6 +139,7 @@ public partial class MainWindowViewModel
             CustomPageList.Add(page);
 
         OnPropertyChanged(nameof(YearPage));
+        OnPropertyChanged(nameof(MonthPage));
         SelectedCustomPage = CustomPages.FirstOrDefault();
     }
 
@@ -147,15 +163,16 @@ public partial class MainWindowViewModel
     [RelayCommand]
     private void EditCustomPage() => IsCustomEditor = true;
 
-    // Чек-лист (шаблон YearView): в режиме Year — страница года,
-    // в отчёте Custom-страницы видов List/Year — записи этой страницы.
+    // Чек-лист (шаблон YearView): в режимах Month/Year — служебные страницы
+    // месяца/года, в отчёте Custom-страницы видов List/Year — записи страницы.
     public string ChecklistTitle
-        => Mode == ScheduleMode.Year
-            ? "Plans for the year"
-            : SelectedCustomPage?.DisplayName ?? string.Empty;
+        => Mode == ScheduleMode.Month ? Strings.Get("PlansForMonth")
+         : Mode == ScheduleMode.Year ? Strings.Get("PlansForYear")
+         : SelectedCustomPage?.DisplayName ?? string.Empty;
 
     public ObservableCollection<CustomEntryViewModel>? ChecklistEntries
-        => Mode == ScheduleMode.Year ? YearPage?.Entries
+        => Mode == ScheduleMode.Month ? MonthPage?.Entries
+         : Mode == ScheduleMode.Year ? YearPage?.Entries
          : Mode == ScheduleMode.Custom ? SelectedCustomPage?.Entries
          : null;
 
@@ -165,7 +182,9 @@ public partial class MainWindowViewModel
         var name = NewChecklistText.Trim();
         if (name.Length == 0)
             return;
-        if (Mode == ScheduleMode.Year && YearPage != null)
+        if (Mode == ScheduleMode.Month && MonthPage != null)
+            MonthPage.AddEntry(name, string.Empty, string.Empty, DateTime.Today.DayOfWeek);
+        else if (Mode == ScheduleMode.Year && YearPage != null)
             YearPage.AddEntry(name, string.Empty, string.Empty, DateTime.Today.DayOfWeek);
         else if (Mode == ScheduleMode.Custom && SelectedCustomPage != null)
             SelectedCustomPage.AddEntry(name, string.Empty, string.Empty, DateTime.Today.DayOfWeek);
@@ -201,8 +220,9 @@ public partial class MainWindowViewModel
     {
         if (entry == null)
             return;
-        // Страница-владелец известна записи; ищем её среди слотов и Year.
-        (YearPage != null && YearPage.Entries.Contains(entry) ? YearPage
+        // Страница-владелец известна записи; ищем её среди слотов, Month и Year.
+        (MonthPage != null && MonthPage.Entries.Contains(entry) ? MonthPage
+            : YearPage != null && YearPage.Entries.Contains(entry) ? YearPage
             : CustomPages.FirstOrDefault(p => p.Entries.Contains(entry)))?.RemoveEntry(entry);
         OnPropertyChanged(nameof(CustomConflictText));
     }
@@ -241,7 +261,7 @@ public partial class MainWindowViewModel
 
             return conflicts.Count == 0
                 ? string.Empty
-                : "Conflicts with schedule: " + string.Join("; ", conflicts.Distinct());
+                : Strings.Get("ConflictsWith") + string.Join("; ", conflicts.Distinct());
         }
     }
 }

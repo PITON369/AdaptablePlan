@@ -6,8 +6,27 @@
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
              x:Class="AdaptablePlan.UI.Views.MonthView"
              x:DataType="vm:MainWindowViewModel">
-    <!-- Placeholder: вид месяца будет переделан по Excel-шаблону пользователя -->
-    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-               FontSize="16" Opacity="0.6"
-               Text="Month view — placeholder" />
+    <!-- Чек-лист планов месяца — тот же механизм, что в режиме Year
+         (служебная страница Slot = -1). -->
+    <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+            <Button Content="{DynamicResource Plan}" Command="{Binding OpenPlanCommand}" />
+            <TextBlock Text="{Binding ChecklistTitle}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding ChecklistEntries}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CustomEntryViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                        <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                        <Button Content="✕" Padding="4,0" Click="OnRemoveClick" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+            <TextBox Width="280" PlaceholderText="{DynamicResource NewItem}" Text="{Binding NewChecklistText, Mode=TwoWay}" />
+            <Button Content="{DynamicResource Add}" Command="{Binding AddChecklistEntryCommand}" />
+        </StackPanel>
+    </StackPanel>
 </UserControl>

@@ -21,6 +21,7 @@ internal sealed class MongoAdaptablePlanDb : IAdaptablePlanDb
     private readonly Lazy<IRepository<ScheduleEntry>> _scheduleEntries;
     private readonly Lazy<IRepository<CustomPage>> _customPages;
     private readonly Lazy<IRepository<DayOffset>> _dayOffsets;
+    private readonly Lazy<IRepository<PlanPage>> _planPages;
 
     public MongoAdaptablePlanDb(MongoDbSettings settings)
     {
@@ -33,12 +34,14 @@ internal sealed class MongoAdaptablePlanDb : IAdaptablePlanDb
         _scheduleEntries = new(() => new MongoRepository<ScheduleEntry>(_database.GetCollection<ScheduleEntry>("ScheduleEntries")));
         _customPages = new(() => new MongoRepository<CustomPage>(_database.GetCollection<CustomPage>("CustomPages")));
         _dayOffsets = new(() => new MongoRepository<DayOffset>(_database.GetCollection<DayOffset>("DayOffsets")));
+        _planPages = new(() => new MongoRepository<PlanPage>(_database.GetCollection<PlanPage>("PlanPages")));
     }
 
     public IRepository<TaskTemplate> TaskTemplates => _taskTemplates.Value;
     public IRepository<ScheduleEntry> ScheduleEntries => _scheduleEntries.Value;
     public IRepository<CustomPage> CustomPages => _customPages.Value;
     public IRepository<DayOffset> DayOffsets => _dayOffsets.Value;
+    public IRepository<PlanPage> PlanPages => _planPages.Value;
 
     public Task EnsureCreatedAsync(CancellationToken ct = default)
         => Task.CompletedTask;
@@ -53,6 +56,8 @@ internal sealed class MongoAdaptablePlanDb : IAdaptablePlanDb
             .DeleteManyAsync(FilterDefinition<CustomPage>.Empty, ct);
         await _database.GetCollection<DayOffset>("DayOffsets")
             .DeleteManyAsync(FilterDefinition<DayOffset>.Empty, ct);
+        await _database.GetCollection<PlanPage>("PlanPages")
+            .DeleteManyAsync(FilterDefinition<PlanPage>.Empty, ct);
     }
 
     private static void EnsureConventionsRegistered()

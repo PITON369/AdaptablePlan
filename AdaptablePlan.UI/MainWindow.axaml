@@ -59,10 +59,10 @@
                     <StackPanel Spacing="16">
                         <TextBlock Foreground="{DynamicResource DialogCardForeground}"
                                    FontSize="20" FontWeight="Bold"
-                                   Text="Time is up!" />
+                                   Text="{DynamicResource TimeIsUp}" />
                         <TextBlock Foreground="{DynamicResource DialogCardForeground}"
                                    Text="{Binding TimeUpTaskName}" />
-                        <Button Content="OK" HorizontalAlignment="Center"
+                        <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
                                 MinWidth="140" MinHeight="44"
                                 Command="{Binding OkTimeUpCommand}" />
                     </StackPanel>

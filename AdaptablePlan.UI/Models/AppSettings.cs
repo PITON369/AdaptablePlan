@@ -15,6 +15,9 @@ public class AppSettings
     // System = следовать системной теме (RequestedThemeVariant Default).
     public string Theme { get; set; } = "System";
 
+    // System = следовать языку системы; иначе English / Russian.
+    public string Language { get; set; } = "System";
+
     // Скрыть в Day-списке столбцы с базовым (несдвинутым) временем.
     public bool HideUnshiftedTime { get; set; }
 
@@ -29,6 +32,13 @@ public class AppSettings
         "Light" => ThemeVariant.Light,
         "Dark" => ThemeVariant.Dark,
         _ => ThemeVariant.Default,
+    };
+
+    public string ToLanguageCode() => Language switch
+    {
+        "English" => "en",
+        "Russian" => "ru",
+        _ => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru" ? "ru" : "en",
     };
 
     public static string SettingsPath

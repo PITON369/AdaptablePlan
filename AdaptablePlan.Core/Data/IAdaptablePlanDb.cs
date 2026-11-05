@@ -13,6 +13,7 @@ public interface IAdaptablePlanDb
     IRepository<ScheduleEntry> ScheduleEntries { get; }
     IRepository<CustomPage> CustomPages { get; }
     IRepository<DayOffset> DayOffsets { get; }
+    IRepository<PlanPage> PlanPages { get; }
 
     Task EnsureCreatedAsync(CancellationToken ct = default);
     Task ClearAsync(CancellationToken ct = default);

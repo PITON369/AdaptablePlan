@@ -29,7 +29,7 @@
                         Background="{DynamicResource WeekGridHeaderBackground}"
                         BorderBrush="{DynamicResource WeekGridLineBrush}"
                         BorderThickness="1,1,1,1">
-                    <TextBlock Text="Time" FontWeight="SemiBold" TextAlignment="Right" />
+                    <TextBlock Text="{DynamicResource Time}" FontWeight="SemiBold" TextAlignment="Right" />
                 </Border>
                 <ItemsControl ItemsSource="{Binding WeekDayHeaders}">
                     <ItemsControl.ItemsPanel>
