@@ -81,6 +81,8 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(IsYearMode));
         OnPropertyChanged(nameof(IsCustomMode));
         OnPropertyChanged(nameof(ShowTaskButton));
+        OnPropertyChanged(nameof(IsDayModeAndListMode));
+        OnPropertyChanged(nameof(IsDayModeAndManualMode));
         OnPropertyChanged(nameof(SelectedDateText));
         OnPropertyChanged(nameof(ChecklistEntries));
         OnPropertyChanged(nameof(ChecklistTitle));

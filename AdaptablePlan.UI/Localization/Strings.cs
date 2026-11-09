@@ -101,6 +101,11 @@ public static class Strings
         ["StartTask"] = ("Start Task", "Запустить задачу"),
         ["StartFirstTask"] = ("Start First Task", "Запустить первую задачу"),
         ["TimeLeft"] = ("Time left: ", "Осталось: "),
+        ["MinShort"] = ("min", "мин"),
+        ["TimerFromList"] = ("From list", "Из списка"),
+        ["TimerManual"] = ("Manual", "Вручную"),
+        ["TimerStart"] = ("Start timer", "Запустить таймер"),
+        ["TimerDone"] = ("Timer finished!", "Таймер завершён!"),
 
         // Настройки
         ["SettingsHeader"] = ("Settings", "Настройки"),

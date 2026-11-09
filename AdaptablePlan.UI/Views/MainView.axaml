@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sys="using:System"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
              x:Class="AdaptablePlan.UI.Views.MainView"
@@ -66,6 +67,49 @@
             <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
                        FontWeight="SemiBold"
                        Text="{Binding SelectedTimeText}" />
+            <!-- Simple timer: выбор минут (список или ручной ввод), старт;
+                 после старта - отсчёт и отмена. Виден только в режиме Day,
+                 отсчёт остаётся видимым при смене режима. -->
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="24,0,0,0"
+                        IsVisible="{Binding IsDayMode}"
+                        IsEnabled="{Binding !IsSimpleTimerRunning}">
+                <RadioButton Content="{DynamicResource TimerFromList}"
+                             IsChecked="{Binding !IsSimpleTimerManual}" />
+                <RadioButton Content="{DynamicResource TimerManual}"
+                             IsChecked="{Binding IsSimpleTimerManual}" />
+            </StackPanel>
+            <ComboBox Margin="8,0,0,0" MinWidth="100"
+                      IsVisible="{Binding IsDayModeAndListMode}"
+                      IsEnabled="{Binding !IsSimpleTimerRunning}"
+                      ItemsSource="{Binding SimpleTimerOptions}"
+                      SelectedItem="{Binding SimpleTimerMinutes, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="sys:Int32">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding}" />
+                            <TextBlock Text="{DynamicResource MinShort}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <NumericUpDown Margin="8,0,0,0" Width="110"
+                           IsVisible="{Binding IsDayModeAndManualMode}"
+                           IsEnabled="{Binding !IsSimpleTimerRunning}"
+                           Minimum="1" Maximum="720" Increment="1"
+                           Value="{Binding SimpleTimerManualMinutes, Mode=TwoWay}" />
+            <Button Content="{DynamicResource TimerStart}"
+                    Margin="8,0,0,0"
+                    IsVisible="{Binding IsDayMode}"
+                    IsEnabled="{Binding !IsSimpleTimerRunning}"
+                    Command="{Binding StartSimpleTimerCommand}" />
+            <TextBlock VerticalAlignment="Center"
+                       IsVisible="{Binding IsSimpleTimerRunning}"
+                       FontWeight="SemiBold"
+                       Text="{Binding SimpleTimeLeftText}" />
+            <Button Content="{DynamicResource Cancel}"
+                    Margin="8,0,0,0"
+                    IsVisible="{Binding IsSimpleTimerRunning}"
+                    Command="{Binding CancelSimpleTimerCommand}" />
             <Button Content="{DynamicResource Edit}" Margin="24,0,0,0"
                     Command="{Binding EditTaskCommand}"
                     IsEnabled="{Binding CanEditTask}" />

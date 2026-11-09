@@ -68,6 +68,24 @@
                     </StackPanel>
                 </Border>
             </Border>
+            <!-- Simple timer done: тот же паттерн оверлея, что и "Time is up" -->
+            <Border IsVisible="{Binding IsSimpleTimerDone}"
+                    Background="{DynamicResource DialogOverlayBackground}">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource DialogCardBackground}"
+                        BorderBrush="{DynamicResource WeekGridLineBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="24"
+                        MinWidth="280">
+                    <StackPanel Spacing="16">
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Text="{DynamicResource TimerDone}" />
+                        <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
+                                MinWidth="140" MinHeight="44"
+                                Command="{Binding OkSimpleTimerDoneCommand}" />
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
     </Grid>
 </Window>
