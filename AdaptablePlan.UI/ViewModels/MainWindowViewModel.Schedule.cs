@@ -70,7 +70,7 @@ public partial class MainWindowViewModel
 
     public string SelectedDateText
         => Mode is ScheduleMode.Day or ScheduleMode.Week or ScheduleMode.Month
-            ? SelectedDate.ToString("ddd d MMM yyyy", CultureInfo.CurrentCulture)
+            ? SelectedDate.ToString("ddd d MMM yyyy", new CultureInfo(Strings.Language))
             : string.Empty;
 
     partial void OnModeChanged(ScheduleMode value)
