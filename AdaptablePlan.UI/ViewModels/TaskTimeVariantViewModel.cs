@@ -14,6 +14,31 @@ public partial class TaskTimeVariantViewModel : ObservableObject
     [ObservableProperty]
     private TimeSpan? _endValue;
 
+    // Время текстом "чч:мм" - для полей ввода в редакторе. Двигаются в обе
+    // стороны: ввод собирает StartValue/EndValue, смена значения раскладывает текст.
+    [ObservableProperty]
+    private string _startText = string.Empty;
+
+    [ObservableProperty]
+    private string _endText = string.Empty;
+
+    partial void OnStartTextChanged(string value) => StartValue = TimeText.Parse(value);
+    partial void OnEndTextChanged(string value) => EndValue = TimeText.Parse(value);
+
+    // Текст переписывается, только если он не даёт то же время: иначе стиралось
+    // бы то, что пользователь печатает посимвольно (промежуточно-невалидное).
+    partial void OnStartValueChanged(TimeSpan? value)
+    {
+        if (TimeText.Parse(StartText) != value)
+            StartText = TimeText.Format(value);
+    }
+
+    partial void OnEndValueChanged(TimeSpan? value)
+    {
+        if (TimeText.Parse(EndText) != value)
+            EndText = TimeText.Format(value);
+    }
+
     [ObservableProperty]
     private bool _mon;
 

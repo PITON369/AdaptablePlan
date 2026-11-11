@@ -24,8 +24,8 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <!-- План-время до границы дня относится к предыдущему дню -->
                 <TextBlock Width="90" VerticalAlignment="Center" Text="{DynamicResource DayStartsAt}" />
-                <TimePicker SelectedTime="{Binding DayStart, Mode=TwoWay}"
-                            ClockIdentifier="24HourClock" />
+                <TextBox Text="{Binding DayStartText}" Width="80" PlaceholderText="07:30"
+                         TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <!-- Пусто - стандартный системный звук окончания -->
@@ -73,6 +73,9 @@
 
         <StackPanel Spacing="8">
             <TextBlock FontWeight="SemiBold" Text="{DynamicResource Database}" />
+            <Button Content="{DynamicResource DeletePastOneTime}"
+                    HorizontalAlignment="Left"
+                    Command="{Binding DeletePastOneTimeTasksCommand}" />
             <Button Content="{DynamicResource DeleteDatabase}"
                     HorizontalAlignment="Left"
                     Command="{Binding RequestDeleteDatabaseCommand}" />

@@ -1,6 +1,7 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
 using AdaptablePlan.UI.Localization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
@@ -99,6 +100,14 @@ public partial class MainWindowViewModel
         else
             TaskTemplates.Remove(SelectedTask);
 
+        // Если удалили идущую таску - сбросить её Id, иначе ToggleTask
+        // вечно уходит в Finish, который ничего не находит.
+        if (SelectedTask.Id == _runningTaskId)
+        {
+            _runningTaskId = Guid.Empty;
+            StopTaskTimer();
+        }
+
         _db.TaskTemplates.DeleteAsync(SelectedTask.Id).GetAwaiter().GetResult();
         SelectedTask = null;
         SelectedItem = null;
@@ -115,6 +124,88 @@ public partial class MainWindowViewModel
 
         if (_db != null)
             _db.TaskTemplates.UpdateAsync(task).GetAwaiter().GetResult();
+    }
+
+    // Кнопка в настройках: разовые таски с прошедшей датой, плюс таски без
+    // даты (созданные до появления поля даты - в расписании их всё равно нет).
+    // Удаление - через оверлей подтверждения со списком; если удалять нечего,
+    // показываем сообщение, чтобы нажатие не выглядело "ничего не произошло".
+    [RelayCommand]
+    private void DeletePastOneTimeTasks()
+    {
+        var tasks = OneTimeTasks
+            .Where(t => t.Date == null || t.Date.Value.Date < PlanToday)
+            .ToList();
+        if (tasks.Count == 0)
+        {
+            IsNoOneTimeOpen = true;
+            return;
+        }
+        ShowOldOneTimeConfirm(tasks);
+    }
+
+    [ObservableProperty]
+    private bool _isNoOneTimeOpen;
+
+    [RelayCommand]
+    private void OkNoOneTime() => IsNoOneTimeOpen = false;
+
+    // Автоочистка при загрузке: прошёл год с даты разовой таски. Сразу не
+    // удаляем - показываем оверлей со списком и ждём подтверждения.
+    [ObservableProperty]
+    private bool _isOldOneTimeConfirmOpen;
+
+    [ObservableProperty]
+    private string _oldOneTimeNames = string.Empty;
+
+    private List<TaskTemplate> _pendingOldOneTime = new();
+
+    private void CleanupOldOneTimeTasks()
+        => ShowOldOneTimeConfirm(OneTimeTasks
+            .Where(t => t.Date == null || t.Date.Value.Date < PlanToday.AddYears(-1))
+            .ToList());
+
+    private void ShowOldOneTimeConfirm(List<TaskTemplate> tasks)
+    {
+        if (tasks.Count == 0)
+            return;
+        _pendingOldOneTime = tasks;
+        OldOneTimeNames = string.Join(", ", tasks.Select(t => t.Name));
+        IsOldOneTimeConfirmOpen = true;
+    }
+
+    [RelayCommand]
+    private void ConfirmDeleteOldOneTime()
+    {
+        IsOldOneTimeConfirmOpen = false;
+        DeleteOneTimeList(_pendingOldOneTime);
+        _pendingOldOneTime = new();
+        RegenerateSchedule();
+    }
+
+    [RelayCommand]
+    private void CancelDeleteOldOneTime()
+    {
+        IsOldOneTimeConfirmOpen = false;
+        _pendingOldOneTime = new();
+    }
+
+    private void DeleteOneTimeList(List<TaskTemplate> tasks)
+    {
+        foreach (var t in tasks)
+        {
+            OneTimeTasks.Remove(t);
+            if (_db == null)
+                continue;
+            try
+            {
+                _db.TaskTemplates.DeleteAsync(t.Id).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // сервер недоступен
+            }
+        }
     }
 
     private void InsertTask()
@@ -143,6 +234,10 @@ public partial class MainWindowViewModel
     {
         if (string.IsNullOrWhiteSpace(task.Name))
             return Strings.Get("ValName");
+
+        // Разовая таска без даты не разворачивается ни на один день расписания.
+        if (task.Type == TaskType.OneTime && task.Date == null)
+            return Strings.Get("ValDateMissing");
 
         // Длительность нужна, только если у какого-то интервала нет явного
         // конца: ScheduleExpander берёт EndTime, когда он задан.

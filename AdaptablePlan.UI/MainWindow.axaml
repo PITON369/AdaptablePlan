@@ -7,7 +7,7 @@
         x:DataType="vm:MainWindowViewModel"
         x:Class="AdaptablePlan.UI.MainWindow"
         FontSize="{Binding FontSize}"
-        Title="AdaptablePlan" Width="1300" Height="650">
+        Title="AdaptablePlan" Width="1400" Height="700">
     <Grid RowDefinitions="Auto,*">
         <!-- DB banners: yellow = server down, loaded from local SQLite backup;
              red = no database at all, default data shown -->
@@ -63,7 +63,8 @@
                         <TextBlock Foreground="{DynamicResource DialogCardForeground}"
                                    Text="{Binding TimeUpTaskName}" />
                         <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
-                                MinWidth="140" MinHeight="44"
+                                MinHeight="44" Padding="16,8"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                                 Command="{Binding OkTimeUpCommand}" />
                     </StackPanel>
                 </Border>
@@ -81,8 +82,53 @@
                                    FontSize="20" FontWeight="Bold"
                                    Text="{DynamicResource TimerDone}" />
                         <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
-                                MinWidth="140" MinHeight="44"
+                                MinHeight="44" Padding="16,8"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                                 Command="{Binding OkSimpleTimerDoneCommand}" />
+                    </StackPanel>
+                </Border>
+            </Border>
+            <!-- Автоудаление годовалых разовых тасок: подтверждение со списком -->
+            <Border IsVisible="{Binding IsOldOneTimeConfirmOpen}"
+                    Background="{DynamicResource DialogOverlayBackground}">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource DialogCardBackground}"
+                        BorderBrush="{DynamicResource WeekGridLineBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="24"
+                        MinWidth="280" MaxWidth="480">
+                    <StackPanel Spacing="16">
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Text="{DynamicResource DeleteOldOneTime}" />
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   Text="{Binding OldOneTimeNames}"
+                                   TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                            <Button Content="{DynamicResource YesDelete}" MinHeight="44" Padding="16,8"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    Command="{Binding ConfirmDeleteOldOneTimeCommand}" />
+                            <Button Content="{DynamicResource Cancel}" MinHeight="44" Padding="16,8"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    Command="{Binding CancelDeleteOldOneTimeCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Border>
+            <!-- Нечего удалять: сообщение вместо пустого срабатывания кнопки -->
+            <Border IsVisible="{Binding IsNoOneTimeOpen}"
+                    Background="{DynamicResource DialogOverlayBackground}">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource DialogCardBackground}"
+                        BorderBrush="{DynamicResource WeekGridLineBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="24"
+                        MinWidth="280">
+                    <StackPanel Spacing="16">
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   Text="{DynamicResource NoOneTimeTasks}" />
+                        <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
+                                MinHeight="44" Padding="16,8"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                Command="{Binding OkNoOneTimeCommand}" />
                     </StackPanel>
                 </Border>
             </Border>

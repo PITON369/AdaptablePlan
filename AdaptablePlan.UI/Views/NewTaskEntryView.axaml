@@ -11,9 +11,7 @@
              Padding="16">
     <UserControl.Resources>
         <converters:TaskTypeDisplayConverter x:Key="TaskTypeDisplayConverter" />
-        <!-- TimePickerThemeMinWidth: перекрытие ресурса темы Fluent (там 242),
-             иначе пикер времени не сжимается уже "~чч:мм" -->
-        <x:Double x:Key="TimePickerThemeMinWidth">90</x:Double>
+        <converters:DateTimeOffsetConverter x:Key="DateTimeOffsetConverter" />
     </UserControl.Resources>
     <StackPanel Spacing="12" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -51,6 +49,11 @@
             <TextBox Text="{Binding CurrentTask.Name}" />
         </StackPanel>
 
+        <StackPanel Spacing="4" IsVisible="{Binding IsOneTime}">
+            <TextBlock Text="{DynamicResource Date}" />
+            <DatePicker SelectedDate="{Binding CurrentTask.Date, Converter={StaticResource DateTimeOffsetConverter}}" />
+        </StackPanel>
+
         <StackPanel Spacing="4" IsVisible="{Binding ShowDuration}">
             <TextBlock Text="{DynamicResource DurationMin}" />
             <TextBox Text="{Binding DurationText}"
@@ -68,26 +71,32 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TaskTimeVariantViewModel">
                         <StackPanel Spacing="2" Margin="0,0,0,4">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="{DynamicResource Start}" VerticalAlignment="Center" />
-                                <TimePicker SelectedTime="{Binding StartValue, Mode=TwoWay}"
-                                            ClockIdentifier="24HourClock" />
-                                <TextBlock Text="{DynamicResource End}" VerticalAlignment="Center" />
-                                <TimePicker SelectedTime="{Binding EndValue, Mode=TwoWay}"
-                                            ClockIdentifier="24HourClock" />
-                                <Button Content="{DynamicResource Remove}"
+                            <StackPanel Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Start}" VerticalAlignment="Center" />
+                                    <TextBox Text="{Binding StartText}" Width="80" PlaceholderText="07:30"
+                                             TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{DynamicResource End}" VerticalAlignment="Center" />
+                                    <TextBox Text="{Binding EndText}" Width="80" PlaceholderText="07:30"
+                                             TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
+                                </StackPanel>
+                            </StackPanel>
+                            <DockPanel Margin="0,2,0,0">
+                                <Button DockPanel.Dock="Right" Content="{DynamicResource Remove}"
                                         Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTimeVariantCommand}"
                                         CommandParameter="{Binding}" />
-                            </StackPanel>
-                            <UniformGrid Rows="1" Columns="7" Margin="0,2,0,0">
-                                <CheckBox Content="{DynamicResource Mon}" IsChecked="{Binding Mon}" />
-                                <CheckBox Content="{DynamicResource Tue}" IsChecked="{Binding Tue}" />
-                                <CheckBox Content="{DynamicResource Wed}" IsChecked="{Binding Wed}" />
-                                <CheckBox Content="{DynamicResource Thu}" IsChecked="{Binding Thu}" />
-                                <CheckBox Content="{DynamicResource Fri}" IsChecked="{Binding Fri}" />
-                                <CheckBox Content="{DynamicResource Sat}" IsChecked="{Binding Sat}" />
-                                <CheckBox Content="{DynamicResource Sun}" IsChecked="{Binding Sun}" />
-                            </UniformGrid>
+                                <UniformGrid Rows="1" Columns="7">
+                                    <CheckBox Content="{DynamicResource Mon}" IsChecked="{Binding Mon}" />
+                                    <CheckBox Content="{DynamicResource Tue}" IsChecked="{Binding Tue}" />
+                                    <CheckBox Content="{DynamicResource Wed}" IsChecked="{Binding Wed}" />
+                                    <CheckBox Content="{DynamicResource Thu}" IsChecked="{Binding Thu}" />
+                                    <CheckBox Content="{DynamicResource Fri}" IsChecked="{Binding Fri}" />
+                                    <CheckBox Content="{DynamicResource Sat}" IsChecked="{Binding Sat}" />
+                                    <CheckBox Content="{DynamicResource Sun}" IsChecked="{Binding Sun}" />
+                                </UniformGrid>
+                            </DockPanel>
                         </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

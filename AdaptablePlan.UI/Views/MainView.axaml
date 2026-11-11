@@ -92,11 +92,10 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <NumericUpDown Margin="8,0,0,0" Width="110"
+            <TextBox Margin="8,0,0,0" Width="110"
                            IsVisible="{Binding IsDayModeAndManualMode}"
                            IsEnabled="{Binding !IsSimpleTimerRunning}"
-                           Minimum="1" Maximum="720" Increment="1"
-                           Value="{Binding SimpleTimerManualMinutes, Mode=TwoWay}" />
+                           Text="{Binding SimpleTimerManualMinutes, Mode=TwoWay}" />
             <Button Content="{DynamicResource TimerStart}"
                     Margin="8,0,0,0"
                     IsVisible="{Binding IsDayMode}"

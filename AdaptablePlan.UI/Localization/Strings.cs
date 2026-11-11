@@ -36,6 +36,7 @@ public static class Strings
         ["NewItem"] = ("New item", "Новый пункт"),
         ["Start"] = ("Start", "Начало"),
         ["End"] = ("End", "Конец"),
+        ["Date"] = ("Date", "Дата"),
 
         // Колонки дня
         ["Plan"] = ("Plan", "План"),
@@ -95,6 +96,7 @@ public static class Strings
             "Время окончания должно быть позже начала."),
         ["ValDayMissing"] = ("Select at least one day for every time slot.",
             "Выберите хотя бы один день для каждого набора."),
+        ["ValDateMissing"] = ("Select a date for the task.", "Выберите дату задачи."),
         ["OverlapOn"] = ("Time overlaps with '{0}' on {1}", "Время пересекается с '{0}' ({1})"),
         ["ConflictsWith"] = ("Conflicts with schedule: ", "Пересекается с расписанием: "),
         ["FinishTask"] = ("Finish Task", "Завершить задачу"),
@@ -128,6 +130,9 @@ public static class Strings
         ["LangRussian"] = ("Russian", "Русский"),
         ["Database"] = ("Database", "База данных"),
         ["DeleteDatabase"] = ("Delete database", "Удалить базу данных"),
+        ["DeletePastOneTime"] = ("Delete past one-time tasks", "Удалить прошедшие разовые таски"),
+        ["DeleteOldOneTime"] = ("Delete these one-time tasks?", "Удалить эти разовые таски?"),
+        ["NoOneTimeTasks"] = ("No one-time tasks to delete", "Разовые таски отсутствуют"),
         ["DeleteConfirm"] = ("Delete all data? This cannot be undone.",
             "Удалить все данные? Это действие нельзя отменить."),
 

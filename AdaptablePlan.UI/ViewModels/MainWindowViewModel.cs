@@ -195,10 +195,20 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnHideUnshiftedTimeChanged(bool value) => SaveAppearance();
     partial void OnDayStartChanged(TimeSpan? value)
     {
+        // Текст переписывается, только если он не даёт то же время: иначе
+        // стиралось бы то, что пользователь печатает посимвольно.
+        if (TimeText.Parse(DayStartText) != value)
+            DayStartText = TimeText.Format(value);
         RegenerateSchedule();
         SaveAppearance();
     }
     partial void OnSoundFileChanged(string value) => SaveAppearance();
+
+    // Время границы дня текстом "чч:мм" - для поля ввода в настройках.
+    [ObservableProperty]
+    private string _dayStartText = string.Empty;
+
+    partial void OnDayStartTextChanged(string value) => DayStart = TimeText.Parse(value);
 
     // "Сегодня" по границе дня: до DayStart утра это ещё предыдущий
     // календарный день - его запись DayOffset и его галочки продолжают жить.
@@ -389,6 +399,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OneTimeTasks.Clear();
         foreach (var t in templates)
             (t.Type == TaskType.OneTime ? OneTimeTasks : TaskTemplates).Add(t);
+        CleanupOldOneTimeTasks();
         RegenerateSchedule();
     }
 
@@ -489,7 +500,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var item = RunningItem();
         if (item == null)
+        {
+            // Идущая таска исчезла из расписания (например, удалена) -
+            // сбросить застрявший Id, иначе старт новых тасок заблокирован.
+            _runningTaskId = Guid.Empty;
             return;
+        }
 
         StopTaskTimer();
 

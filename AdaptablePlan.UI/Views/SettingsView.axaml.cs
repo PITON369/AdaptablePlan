@@ -1,5 +1,6 @@
 using AdaptablePlan.UI.ViewModels;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 
@@ -11,6 +12,10 @@ public partial class SettingsView : UserControl
     {
         InitializeComponent();
     }
+
+    private void OnTimeTextInput(object? sender, TextInputEventArgs e) => TimeBox.OnTextInput(sender, e);
+
+    private void OnTimeTextChanged(object? sender, TextChangedEventArgs e) => TimeBox.OnTextChanged(sender, e);
 
     private async void OnBrowseSound(object? sender, RoutedEventArgs e)
     {
