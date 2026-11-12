@@ -84,7 +84,7 @@ public partial class MainWindowViewModel
             new() { Id = Guid.NewGuid(), Slot = -1, Name = "Month", ViewType = PageViewType.List },
         };
         for (int i = 1; i <= 10; i++)
-            pages.Add(new CustomPage { Id = Guid.NewGuid(), Slot = i, Name = $"Custom {i}", ViewType = types[i - 1] });
+            pages.Add(new CustomPage { Id = Guid.NewGuid(), Slot = i, Name = string.Empty, ViewType = types[i - 1] });
         return pages;
     }
 

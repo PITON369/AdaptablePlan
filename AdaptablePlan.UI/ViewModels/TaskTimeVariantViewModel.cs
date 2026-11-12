@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AdaptablePlan.Core.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -80,6 +81,12 @@ public partial class TaskTimeVariantViewModel : ObservableObject
         StartTime = StartValue?.ToString(@"hh\:mm") ?? string.Empty,
         EndTime = EndValue?.ToString(@"hh\:mm") ?? string.Empty,
     };
+
+    public void SetDays(IEnumerable<DayOfWeek> days)
+    {
+        foreach (var day in Enum.GetValues<DayOfWeek>())
+            SetDay(day, days.Contains(day));
+    }
 
     private void SetDay(DayOfWeek day, bool value)
     {

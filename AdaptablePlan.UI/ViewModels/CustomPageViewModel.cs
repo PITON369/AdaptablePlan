@@ -30,9 +30,9 @@ public partial class CustomPageViewModel : ObservableObject
         set { Model.Name = value; OnPropertyChanged(); OnPropertyChanged(nameof(DisplayName)); }
     }
 
-    // Пустое имя показывается как «Custom N» по номеру слота.
+    // Пустое имя показывается как "Пользовательская N" (в англ. локали "Custom N").
     public string DisplayName
-        => string.IsNullOrWhiteSpace(Model.Name) ? $"Custom {Slot}" : Model.Name;
+        => string.IsNullOrWhiteSpace(Model.Name) ? Strings.Format("CustomSlotName", Slot) : Model.Name;
 
     // Очистка страницы: имя пустое (в списке снова «Custom N»), записи удалены. Вид не трогаем.
     public void Clear()

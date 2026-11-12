@@ -163,6 +163,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _selectedTimeText = string.Empty;
 
+    [ObservableProperty]
+    private bool _hasSelectedTime;
+
     public IEnumerable<TaskType> TaskTypes => Enum.GetValues<TaskType>();
 
     [ObservableProperty]

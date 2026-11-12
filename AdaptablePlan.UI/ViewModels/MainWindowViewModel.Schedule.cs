@@ -117,7 +117,8 @@ public partial class MainWindowViewModel
         SelectedTask = value?.Template;
         SelectedTimeText = value == null || string.IsNullOrEmpty(value.StartTime)
             ? string.Empty
-            : $"{value.DayName} {value.StartTime}-{value.EndTime}";
+            : $"{ShortDayName(value.Day)} {value.StartTime}-{value.EndTime}";
+        HasSelectedTime = SelectedTimeText.Length > 0;
         UpdateTimeLabels();
         OnPropertyChanged(nameof(CanToggleTask));
         OnPropertyChanged(nameof(CanEditTask));
@@ -481,6 +482,41 @@ public partial class MainWindowViewModel
     // --- Navigation commands ---
     [RelayCommand]
     private void PreviousPeriod() => ShiftPeriod(-1);
+
+    // Кнопка "Добавить после" в нижней панели: работает по выделенной таске,
+    // как "Редактировать". Форма новой задачи с началом = конец выделенной
+    // таски, днями её варианта и концом = старт следующего пункта дня.
+    [RelayCommand]
+    private void AddTaskAfterSelected()
+    {
+        if (SelectedItem == null || SelectedItem.CustomSource != null)
+            return;
+        AddTaskAfter(SelectedItem);
+    }
+
+    private void AddTaskAfter(ScheduleItem item)
+    {
+        OpenNewTask();
+        var current = TimeVariants[0];
+        var variant = ScheduleExpander.VariantForDay(item.Template, item.Date.DayOfWeek);
+        current.StartText = item.EndTime;
+        if (variant != null)
+            current.SetDays(variant.Days);
+        var index = Schedule.IndexOf(item);
+        for (var i = index + 1; index >= 0 && i < Schedule.Count; i++)
+        {
+            var next = Schedule[i];
+            if (next.PlanDay != item.PlanDay
+                || !ScheduleExpander.TryParseTime(next.StartTime, out var nextStart))
+                continue;
+            // Конец подставляем, только если следующий позже конца текущей:
+            // иначе (пересечение, сдвиги) получился бы конец раньше начала.
+            if (ScheduleExpander.TryParseTime(item.EndTime, out var end) && nextStart > end)
+                current.EndText = next.StartTime;
+            break;
+        }
+    }
+
 
     [RelayCommand]
     private void NextPeriod() => ShiftPeriod(1);

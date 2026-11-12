@@ -110,12 +110,16 @@ public static class ScheduleExpander
                 var (s, e) = VariantInterval(t, variant);
                 if (s != null)
                 {
-                    // Сдвиг считается по базовому старту и двигает начало и конец
-                    // одинаково — длительность таски не меняется.
-                    var shift = TimeSpan.FromMinutes(ShiftMinutes(s.Value, date, t, dayOffset));
-                    start = FormatTime(Normalize(s.Value + shift));
+                    // Сдвиг каждого края - по точке этого края: событие внутри
+                    // интервала таски двигает конец отдельно (фактический конец
+                    // завершённой таски всегда равен её событию завершения).
+                    var shiftStart = TimeSpan.FromMinutes(ShiftMinutes(s.Value, date, t, dayOffset));
+                    start = FormatTime(Normalize(s.Value + shiftStart));
                     if (e != null)
-                        end = FormatTime(Normalize(e.Value + shift));
+                    {
+                        var shiftEnd = TimeSpan.FromMinutes(ShiftMinutes(e.Value, date, t, dayOffset));
+                        end = FormatTime(Normalize(e.Value + shiftEnd));
+                    }
                 }
             }
             result.Add((date, start, end));

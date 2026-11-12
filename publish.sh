@@ -40,8 +40,6 @@ touch "$stamp"
 
 exe="$out/AdaptablePlan.Desktop.exe"
 lnk="$USERPROFILE/Desktop/AdaptablePlan.lnk"
-if [ ! -f "$lnk" ]; then
-    powershell -ExecutionPolicy Bypass -Command "\$ws = New-Object -ComObject WScript.Shell; \$sc = \$ws.CreateShortcut('$lnk'); \$sc.TargetPath = '$exe'; \$sc.Save(); Write-Host 'Shortcut created'"
-fi
+powershell -Command "\$ws = New-Object -ComObject WScript.Shell; \$sc = \$ws.CreateShortcut('$lnk'); \$sc.TargetPath = '$exe'; \$sc.IconLocation = '$exe,0'; \$sc.Save(); Write-Host 'Shortcut updated'"
 
 echo "Опубликовано: $version"

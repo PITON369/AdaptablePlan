@@ -51,7 +51,7 @@ public partial class MainWindowViewModel
         var conflict = FindConflict(CurrentTask, IsEditing ? SelectedTask : null);
         if (conflict != null)
         {
-            ValidationMessage = conflict;
+            OfferShiftNext(conflict);
             return;
         }
 
@@ -64,6 +64,96 @@ public partial class MainWindowViewModel
 
         RegenerateSchedule();
         IsNewTaskOpen = false;
+    }
+
+    // Пересечение с соседней таской: вместо ошибки предлагаем одним действием
+    // сдвинуть её начало на наш новый конец - общая граница за один шаг.
+    [ObservableProperty]
+    private bool _isShiftNextOpen;
+
+    [ObservableProperty]
+    private string _shiftNextMessage = string.Empty;
+
+    private TaskTemplate? _shiftNextTask;
+    private TaskTimeVariant? _shiftNextVariant;
+    private TimeSpan _shiftNextNewEnd;
+    private string _shiftNextConflict = string.Empty;
+
+    private void OfferShiftNext(string conflict)
+    {
+        var shift = FindShiftCandidate();
+        if (shift == null)
+        {
+            ValidationMessage = conflict;
+            return;
+        }
+        _shiftNextTask = shift.Value.Task;
+        _shiftNextVariant = shift.Value.Variant;
+        _shiftNextNewEnd = shift.Value.NewEnd;
+        _shiftNextConflict = conflict;
+        ShiftNextMessage = Strings.Format("ShiftNextAsk", shift.Value.Task.Name,
+            ScheduleExpander.FormatTime(shift.Value.OldStart),
+            ScheduleExpander.FormatTime(shift.Value.NewEnd));
+        ValidationMessage = string.Empty;
+        IsShiftNextOpen = true;
+    }
+
+    // Ближайшая задетая соседняя таска: вариант, чей старт попадает между
+    // началом и новым концом сохраняемой таски. Вариант с явным концом, который
+    // совпал бы с новым началом (нулевая длина), не предлагаем.
+    private (TaskTemplate Task, TaskTimeVariant Variant, TimeSpan OldStart, TimeSpan NewEnd)? FindShiftCandidate()
+    {
+        (TaskTemplate, TaskTimeVariant, TimeSpan, TimeSpan)? found = null;
+        TimeSpan? best = null;
+        var exclude = IsEditing ? SelectedTask : null;
+        foreach (var t in TaskTemplates.Concat(OneTimeTasks))
+        {
+            if (ReferenceEquals(t, exclude) || t.Type == TaskType.OneTime)
+                continue;
+            foreach (var v in t.DayTimes)
+            {
+                if (!ScheduleExpander.TryParseTime(v.StartTime, out var start))
+                    continue;
+                foreach (var c in CurrentTask.DayTimes)
+                {
+                    if (!v.Days.Overlaps(c.Days))
+                        continue;
+                    var (s, e) = ScheduleExpander.VariantInterval(CurrentTask, c);
+                    if (s == null || e == null || start <= s.Value || start >= e.Value)
+                        continue;
+                    if (ScheduleExpander.TryParseTime(v.EndTime, out var end) && end <= e.Value)
+                        continue;
+                    if (best != null && start >= best.Value)
+                        continue;
+                    best = start;
+                    found = (t, v, start, e.Value);
+                }
+            }
+        }
+        return found;
+    }
+
+    [RelayCommand]
+    private void ConfirmShiftNext()
+    {
+        IsShiftNextOpen = false;
+        if (_shiftNextTask == null || _shiftNextVariant == null)
+            return;
+        _shiftNextVariant.StartTime = ScheduleExpander.FormatTime(_shiftNextNewEnd);
+        if (_db != null)
+            _db.TaskTemplates.UpdateAsync(_shiftNextTask).GetAwaiter().GetResult();
+        _shiftNextTask = null;
+        _shiftNextVariant = null;
+        SaveNewTask();
+    }
+
+    [RelayCommand]
+    private void CancelShiftNext()
+    {
+        IsShiftNextOpen = false;
+        _shiftNextTask = null;
+        _shiftNextVariant = null;
+        ValidationMessage = _shiftNextConflict;
     }
 
     [RelayCommand]

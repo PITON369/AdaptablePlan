@@ -22,7 +22,7 @@
             <RadioButton Content="{DynamicResource Month}" IsChecked="{Binding IsMonthMode, Mode=TwoWay}" />
             <RadioButton Content="{DynamicResource Year}" IsChecked="{Binding IsYearMode, Mode=TwoWay}" />
             <RadioButton Content="{DynamicResource Custom}" IsChecked="{Binding IsCustomMode, Mode=TwoWay}" />
-            <ComboBox x:Name="CustomPagesCombo" Margin="16,0,0,0" Width="160"
+            <ComboBox x:Name="CustomPagesCombo" Margin="16,0,0,0" MinWidth="160"
                       IsEnabled="{Binding IsCustomMode}"
                       ItemsSource="{Binding CustomPageList}"
                       SelectedItem="{Binding SelectedCustomPage, Mode=TwoWay}">
@@ -32,12 +32,6 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock VerticalAlignment="Center" Margin="16,0,0,0"
-                       FontWeight="SemiBold"
-                       Text="{Binding SelectedDateText}" />
-            <Button Content="&lt;" Margin="16,0,0,0" Command="{Binding PreviousPeriodCommand}" />
-            <Button Content="&gt;" Command="{Binding NextPeriodCommand}" />
-            <Button Content="{DynamicResource Today}" Command="{Binding GoToTodayCommand}" />
             <CheckBox Content="{DynamicResource StartWeekOnMonday}"
                       VerticalAlignment="Center"
                       Margin="16,0,0,0"
@@ -54,73 +48,94 @@
         <!-- Single slot: code-behind swaps DayView / WeekView / MonthView / YearView / CustomPageView -->
         <ContentControl Grid.Row="2" x:Name="ScheduleHost" />
 
-        <!-- Action buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal"
-                    Spacing="8" Margin="0,8,0,0">
-            <Button Content="{Binding TaskActionText}"
-                    Command="{Binding ToggleTaskCommand}"
-                    IsEnabled="{Binding CanToggleTask}"
-                    IsVisible="{Binding ShowTaskButton}" />
-            <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
-                       FontWeight="SemiBold"
-                       Text="{Binding TimeLeftText}" />
-            <TextBlock VerticalAlignment="Center" Margin="24,0,0,0"
-                       FontWeight="SemiBold"
-                       Text="{Binding SelectedTimeText}" />
-            <!-- Simple timer: выбор минут (список или ручной ввод), старт;
-                 после старта - отсчёт и отмена. Виден только в режиме Day,
-                 отсчёт остаётся видимым при смене режима. -->
-            <StackPanel Orientation="Horizontal" Spacing="4" Margin="24,0,0,0"
+        <!-- Нижняя панель: первая строка - дата и таймер, вторая - кнопки;
+             единый шаг 8 между всеми элементами, без локальных отступов -->
+        <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="0,8,0,0">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold"
+                           Text="{Binding SelectedDateText}" />
+                <Button Content="&lt;" Command="{Binding PreviousPeriodCommand}" />
+                <Button Content="&gt;" Command="{Binding NextPeriodCommand}" />
+                <Button Content="{DynamicResource Today}" Command="{Binding GoToTodayCommand}" />
+                <Border Width="1" Margin="2,0"
+                        Background="{DynamicResource WeekGridLineBrush}" />
+                <TextBlock VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="{Binding TimeLeftText}" />
+                <TextBlock VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           IsVisible="{Binding HasSelectedTime}"
+                           Text="{Binding SelectedTimeText}" />
+                <Border Width="1" Margin="2,0"
+                        IsVisible="{Binding HasSelectedTime}"
+                        Background="{DynamicResource WeekGridLineBrush}" />
+                <!-- Simple timer: выбор минут (список или ручной ввод), старт;
+                     после старта - отсчёт и отмена. Виден только в режиме Day,
+                     отсчёт остаётся видимым при смене режима. -->
+                <StackPanel Orientation="Horizontal" Spacing="8"
+                            IsVisible="{Binding IsDayMode}"
+                            IsEnabled="{Binding !IsSimpleTimerRunning}">
+                    <RadioButton Content="{DynamicResource TimerFromList}"
+                                 IsChecked="{Binding !IsSimpleTimerManual}" />
+                    <RadioButton Content="{DynamicResource TimerManual}"
+                                 IsChecked="{Binding IsSimpleTimerManual}" />
+                </StackPanel>
+                <ComboBox MinWidth="100"
+                          IsVisible="{Binding IsDayModeAndListMode}"
+                          IsEnabled="{Binding !IsSimpleTimerRunning}"
+                          ItemsSource="{Binding SimpleTimerOptions}"
+                          SelectedItem="{Binding SimpleTimerMinutes, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="sys:Int32">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding}" />
+                                <TextBlock Text="{DynamicResource MinShort}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBox Width="110"
+                                IsVisible="{Binding IsDayModeAndManualMode}"
+                                IsEnabled="{Binding !IsSimpleTimerRunning}"
+                                Text="{Binding SimpleTimerManualMinutes, Mode=TwoWay}" />
+                <Button Content="{DynamicResource TimerStart}"
                         IsVisible="{Binding IsDayMode}"
-                        IsEnabled="{Binding !IsSimpleTimerRunning}">
-                <RadioButton Content="{DynamicResource TimerFromList}"
-                             IsChecked="{Binding !IsSimpleTimerManual}" />
-                <RadioButton Content="{DynamicResource TimerManual}"
-                             IsChecked="{Binding IsSimpleTimerManual}" />
+                        IsEnabled="{Binding !IsSimpleTimerRunning}"
+                        Command="{Binding StartSimpleTimerCommand}" />
+                <TextBlock VerticalAlignment="Center"
+                           IsVisible="{Binding IsSimpleTimerRunning}"
+                           FontWeight="SemiBold"
+                           Text="{Binding SimpleTimeLeftText}" />
+                <Button Content="{DynamicResource Cancel}"
+                        IsVisible="{Binding IsSimpleTimerRunning}"
+                        Command="{Binding CancelSimpleTimerCommand}" />
             </StackPanel>
-            <ComboBox Margin="8,0,0,0" MinWidth="100"
-                      IsVisible="{Binding IsDayModeAndListMode}"
-                      IsEnabled="{Binding !IsSimpleTimerRunning}"
-                      ItemsSource="{Binding SimpleTimerOptions}"
-                      SelectedItem="{Binding SimpleTimerMinutes, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="sys:Int32">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <TextBlock Text="{Binding}" />
-                            <TextBlock Text="{DynamicResource MinShort}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBox Margin="8,0,0,0" Width="110"
-                           IsVisible="{Binding IsDayModeAndManualMode}"
-                           IsEnabled="{Binding !IsSimpleTimerRunning}"
-                           Text="{Binding SimpleTimerManualMinutes, Mode=TwoWay}" />
-            <Button Content="{DynamicResource TimerStart}"
-                    Margin="8,0,0,0"
-                    IsVisible="{Binding IsDayMode}"
-                    IsEnabled="{Binding !IsSimpleTimerRunning}"
-                    Command="{Binding StartSimpleTimerCommand}" />
-            <TextBlock VerticalAlignment="Center"
-                       IsVisible="{Binding IsSimpleTimerRunning}"
-                       FontWeight="SemiBold"
-                       Text="{Binding SimpleTimeLeftText}" />
-            <Button Content="{DynamicResource Cancel}"
-                    Margin="8,0,0,0"
-                    IsVisible="{Binding IsSimpleTimerRunning}"
-                    Command="{Binding CancelSimpleTimerCommand}" />
-            <Button Content="{DynamicResource Edit}" Margin="24,0,0,0"
-                    Command="{Binding EditTaskCommand}"
-                    IsEnabled="{Binding CanEditTask}" />
-            <Button Content="{DynamicResource Delete}"
-                    Command="{Binding DeleteTaskCommand}"
-                    IsEnabled="{Binding CanEditTask}" />
-            <Button Content="{DynamicResource Refresh}" Margin="24,0,0,0"
-                    Command="{Binding RefreshCommand}" />
-            <Button Content="{DynamicResource NewTask}" Margin="24,0,0,0"
-                    Command="{Binding OpenNewTaskCommand}"/>
-            <Button Content="{DynamicResource Settings}" Margin="24,0,0,0"
-                    Command="{Binding OpenSettingsCommand}"/>
-        </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal"
+                        Spacing="8" Margin="0,8,0,0">
+                <Button Content="{Binding TaskActionText}"
+                        Command="{Binding ToggleTaskCommand}"
+                        IsEnabled="{Binding CanToggleTask}"
+                        IsVisible="{Binding ShowTaskButton}" />
+                <Border Width="1" Margin="2,0"
+                        Background="{DynamicResource WeekGridLineBrush}" />
+                <Button Content="{DynamicResource Edit}"
+                        Command="{Binding EditTaskCommand}"
+                        IsEnabled="{Binding CanEditTask}" />
+                <Button Content="{DynamicResource AddAfter}"
+                        Command="{Binding AddTaskAfterSelectedCommand}"
+                        IsEnabled="{Binding CanEditTask}" />
+                <Button Content="{DynamicResource NewTask}"
+                        Command="{Binding OpenNewTaskCommand}"/>
+                <Button Content="{DynamicResource Delete}"
+                        Command="{Binding DeleteTaskCommand}"
+                        IsEnabled="{Binding CanEditTask}" />
+                <Border Width="1" Margin="2,0"
+                        Background="{DynamicResource WeekGridLineBrush}" />
+                <Button Content="{DynamicResource Refresh}"
+                        Command="{Binding RefreshCommand}" />
+                <Button Content="{DynamicResource Settings}"
+                        Command="{Binding OpenSettingsCommand}"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>
