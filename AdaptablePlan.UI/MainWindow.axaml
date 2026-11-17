@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:AdaptablePlan.UI.ViewModels"
+        xmlns:sys="using:System"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
         x:DataType="vm:MainWindowViewModel"
         x:Class="AdaptablePlan.UI.MainWindow"
@@ -115,25 +116,33 @@
                     </StackPanel>
                 </Border>
             </Border>
-            <!-- Сдвиг начала соседней таски: одно действие вместо правки двух -->
-            <Border IsVisible="{Binding IsShiftNextOpen}"
+            <!-- Пересечение: сдвинуть цепочку задетых тасок, список "до -> после" -->
+            <Border IsVisible="{Binding IsShiftChainOpen}"
                     Background="{DynamicResource DialogOverlayBackground}">
                 <Border HorizontalAlignment="Center" VerticalAlignment="Center"
                         Background="{DynamicResource DialogCardBackground}"
                         BorderBrush="{DynamicResource WeekGridLineBrush}"
                         BorderThickness="1" CornerRadius="8" Padding="24"
-                        MinWidth="280" MaxWidth="480">
+                        MinWidth="320" MaxWidth="520">
                     <StackPanel Spacing="16">
                         <TextBlock Foreground="{DynamicResource DialogCardForeground}"
-                                   Text="{Binding ShiftNextMessage}"
-                                   TextWrapping="Wrap" />
+                                   Text="{DynamicResource ShiftChainAsk}" />
+                        <ItemsControl ItemsSource="{Binding ShiftChainLines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="sys:String">
+                                    <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                               Text="{Binding}"
+                                               TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
                             <Button Content="{DynamicResource Yes}" MinHeight="44" Padding="16,8"
                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                    Command="{Binding ConfirmShiftNextCommand}" />
+                                    Command="{Binding ConfirmShiftChainCommand}" />
                             <Button Content="{DynamicResource Cancel}" MinHeight="44" Padding="16,8"
                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                    Command="{Binding CancelShiftNextCommand}" />
+                                    Command="{Binding CancelShiftChainCommand}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

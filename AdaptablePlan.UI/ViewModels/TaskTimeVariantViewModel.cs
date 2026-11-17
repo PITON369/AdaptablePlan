@@ -61,6 +61,10 @@ public partial class TaskTimeVariantViewModel : ObservableObject
     [ObservableProperty]
     private bool _sun;
 
+    // Полоса-разделитель между блоками времени: не нужна последнему блоку.
+    [ObservableProperty]
+    private bool _isLast = true;
+
     public bool HasAnyDay => Mon || Tue || Wed || Thu || Fri || Sat || Sun;
 
     public static TaskTimeVariantViewModel FromModel(TaskTimeVariant v)

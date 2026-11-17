@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace AdaptablePlan.UI.ViewModels;
@@ -12,11 +13,41 @@ namespace AdaptablePlan.UI.ViewModels;
 // Редактор задач: валидация, конфликты, CRUD шаблонов.
 public partial class MainWindowViewModel
 {
-    [RelayCommand]
-    private void AddTimeVariant() => TimeVariants.Add(new TaskTimeVariantViewModel());
+    // Длительность задаёт конец всем блокам времени: конец = начало + длительность.
+    partial void OnDurationTextChanged(string value)
+    {
+        if (CurrentTask is null
+            || CurrentTask.Type is not (TaskType.Recurring or TaskType.Things)
+            || !int.TryParse(value.Trim(), out var minutes) || minutes <= 0)
+            return;
+        foreach (var v in TimeVariants)
+        {
+            if (v.StartValue is TimeSpan start)
+                v.EndValue = start.Add(TimeSpan.FromMinutes(minutes));
+        }
+    }
 
     [RelayCommand]
-    private void RemoveTimeVariant(TaskTimeVariantViewModel variant) => TimeVariants.Remove(variant);
+    private void AddTimeVariant()
+    {
+        TimeVariants.Add(new TaskTimeVariantViewModel());
+        UpdateTimeVariantSeparators();
+    }
+
+    [RelayCommand]
+    private void RemoveTimeVariant(TaskTimeVariantViewModel variant)
+    {
+        TimeVariants.Remove(variant);
+        UpdateTimeVariantSeparators();
+    }
+
+    // Полоса-разделитель между блоками времени: последний блок без полосы.
+    private void UpdateTimeVariantSeparators()
+    {
+        var last = TimeVariants.Count - 1;
+        for (var i = 0; i <= last; i++)
+            TimeVariants[i].IsLast = i == last;
+    }
 
     [RelayCommand]
     private void OpenNewTask()
@@ -51,7 +82,7 @@ public partial class MainWindowViewModel
         var conflict = FindConflict(CurrentTask, IsEditing ? SelectedTask : null);
         if (conflict != null)
         {
-            OfferShiftNext(conflict);
+            OfferShiftChain(conflict);
             return;
         }
 
@@ -66,94 +97,153 @@ public partial class MainWindowViewModel
         IsNewTaskOpen = false;
     }
 
-    // Пересечение с соседней таской: вместо ошибки предлагаем одним действием
-    // сдвинуть её начало на наш новый конец - общая граница за один шаг.
+    // Пересечение с соседними тасками: предлагаем одним действием сдвинуть всю
+    // цепочку задетых тасок после новой. Таска сдвигается целиком (начало и
+    // явный конец вместе, длительность сохраняется), в том числе таска, внутрь
+    // которой влезла новая; FixedTime не сдвигается никогда - тогда остаётся
+    // ошибка. Сдвиг хранится на варианте (набор дней), поэтому при разных
+    // дельтах по дням берётся большая, и вариант двигается на все свои дни.
     [ObservableProperty]
-    private bool _isShiftNextOpen;
+    private bool _isShiftChainOpen;
 
-    [ObservableProperty]
-    private string _shiftNextMessage = string.Empty;
+    public ObservableCollection<string> ShiftChainLines { get; } = new();
 
-    private TaskTemplate? _shiftNextTask;
-    private TaskTimeVariant? _shiftNextVariant;
-    private TimeSpan _shiftNextNewEnd;
-    private string _shiftNextConflict = string.Empty;
+    private string _shiftChainConflict = string.Empty;
+    private List<(TaskTemplate Task, TaskTimeVariant Variant, int Delta)> _pendingShifts = new();
 
-    private void OfferShiftNext(string conflict)
+    private void OfferShiftChain(string conflict)
     {
-        var shift = FindShiftCandidate();
-        if (shift == null)
+        var shifts = PlanShiftChain();
+        if (shifts == null || shifts.Count == 0)
         {
             ValidationMessage = conflict;
             return;
         }
-        _shiftNextTask = shift.Value.Task;
-        _shiftNextVariant = shift.Value.Variant;
-        _shiftNextNewEnd = shift.Value.NewEnd;
-        _shiftNextConflict = conflict;
-        ShiftNextMessage = Strings.Format("ShiftNextAsk", shift.Value.Task.Name,
-            ScheduleExpander.FormatTime(shift.Value.OldStart),
-            ScheduleExpander.FormatTime(shift.Value.NewEnd));
+
+        _pendingShifts = shifts;
+        _shiftChainConflict = conflict;
         ValidationMessage = string.Empty;
-        IsShiftNextOpen = true;
+
+        ShiftChainLines.Clear();
+        foreach (var (task, variant, delta) in shifts)
+            ShiftChainLines.Add(DescribeShift(task, variant, delta));
+        IsShiftChainOpen = true;
     }
 
-    // Ближайшая задетая соседняя таска: вариант, чей старт попадает между
-    // началом и новым концом сохраняемой таски. Вариант с явным концом, который
-    // совпал бы с новым началом (нулевая длина), не предлагаем.
-    private (TaskTemplate Task, TaskTimeVariant Variant, TimeSpan OldStart, TimeSpan NewEnd)? FindShiftCandidate()
+    private static readonly DayOfWeek[] DayOrder =
     {
-        (TaskTemplate, TaskTimeVariant, TimeSpan, TimeSpan)? found = null;
-        TimeSpan? best = null;
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday,
+    };
+
+    private static string DescribeShift(TaskTemplate task, TaskTimeVariant variant, int delta)
+    {
+        var (s, e) = ScheduleExpander.VariantInterval(task, variant);
+        var days = string.Join("+", DayOrder.Where(variant.Days.Contains).Select(ShortDayName));
+        string Range(TimeSpan? start, TimeSpan? end) => start == null || end == null
+            ? "?"
+            : $"{ScheduleExpander.FormatTime(start.Value)}-{ScheduleExpander.FormatTime(end.Value)}";
+        var shift = TimeSpan.FromMinutes(delta);
+        return $"{task.Name} ({days}) {Range(s, e)} -> {Range(s?.Add(shift), e?.Add(shift))}";
+    }
+
+    // Прогон дня: новая таска занимает свой интервал, каждая задетая - включая
+    // таску, внутрь которой влезла новая, - и все последующие до свободного
+    // места сдвигаются на конец предыдущей. Возвращает null, если цепочку
+    // построить нельзя (неподвижная помеха).
+    private List<(TaskTemplate Task, TaskTimeVariant Variant, int Delta)>? PlanShiftChain()
+    {
         var exclude = IsEditing ? SelectedTask : null;
-        foreach (var t in TaskTemplates.Concat(OneTimeTasks))
+        var best = new Dictionary<(TaskTemplate, TaskTimeVariant), int>();
+
+        foreach (var day in Enum.GetValues<DayOfWeek>())
         {
-            if (ReferenceEquals(t, exclude) || t.Type == TaskType.OneTime)
+            var (cs, ce) = ScheduleExpander.IntervalForDay(CurrentTask, day);
+            if (cs == null || ce == null)
                 continue;
-            foreach (var v in t.DayTimes)
+
+            var movable = new List<(TaskTemplate T, TaskTimeVariant V, TimeSpan S, TimeSpan E)>();
+            var fixedItems = new List<(TimeSpan S, TimeSpan E)>();
+            foreach (var t in TaskTemplates.Concat(OneTimeTasks))
             {
-                if (!ScheduleExpander.TryParseTime(v.StartTime, out var start))
+                if (ReferenceEquals(t, exclude) || t.Type == TaskType.OneTime)
                     continue;
-                foreach (var c in CurrentTask.DayTimes)
+                var v = ScheduleExpander.VariantForDay(t, day);
+                if (v == null)
+                    continue;
+                var (s, e) = ScheduleExpander.VariantInterval(t, v);
+                if (s == null || e == null)
+                    continue;
+                if (t.Type == TaskType.FixedTime)
                 {
-                    if (!v.Days.Overlaps(c.Days))
-                        continue;
-                    var (s, e) = ScheduleExpander.VariantInterval(CurrentTask, c);
-                    if (s == null || e == null || start <= s.Value || start >= e.Value)
-                        continue;
-                    if (ScheduleExpander.TryParseTime(v.EndTime, out var end) && end <= e.Value)
-                        continue;
-                    if (best != null && start >= best.Value)
-                        continue;
-                    best = start;
-                    found = (t, v, start, e.Value);
+                    fixedItems.Add((s.Value, e.Value));
+                    if (s.Value < ce.Value && cs.Value < e.Value)
+                        return null;
+                    continue;
                 }
+                movable.Add((t, v, s.Value, e.Value));
+            }
+
+            if (movable.All(m => m.S >= ce.Value || m.E <= cs.Value))
+                continue;
+
+            movable.Sort((a, b) => a.S.CompareTo(b.S));
+            var floor = ce.Value;
+            foreach (var m in movable)
+            {
+                if (m.S >= floor)
+                    break;
+                if (m.E <= cs.Value)
+                    continue;
+                var duration = m.E - m.S;
+                var ns = floor;
+                var jumped = true;
+                while (jumped)
+                {
+                    jumped = false;
+                    foreach (var f in fixedItems)
+                    {
+                        if (ns < f.E && f.S < ns + duration)
+                        {
+                            ns = f.E;
+                            jumped = true;
+                        }
+                    }
+                }
+                var delta = (int)(ns - m.S).TotalMinutes;
+                var key = (m.T, m.V);
+                best[key] = Math.Max(best.GetValueOrDefault(key, 0), delta);
+                floor = ns + duration;
             }
         }
-        return found;
+
+        return best.Select(kv => (kv.Key.Item1, kv.Key.Item2, kv.Value)).ToList();
     }
 
     [RelayCommand]
-    private void ConfirmShiftNext()
+    private void ConfirmShiftChain()
     {
-        IsShiftNextOpen = false;
-        if (_shiftNextTask == null || _shiftNextVariant == null)
-            return;
-        _shiftNextVariant.StartTime = ScheduleExpander.FormatTime(_shiftNextNewEnd);
-        if (_db != null)
-            _db.TaskTemplates.UpdateAsync(_shiftNextTask).GetAwaiter().GetResult();
-        _shiftNextTask = null;
-        _shiftNextVariant = null;
+        IsShiftChainOpen = false;
+        foreach (var (task, variant, delta) in _pendingShifts)
+        {
+            if (!ScheduleExpander.TryParseTime(variant.StartTime, out var s))
+                continue;
+            variant.StartTime = ScheduleExpander.FormatTime(s + TimeSpan.FromMinutes(delta));
+            if (ScheduleExpander.TryParseTime(variant.EndTime, out var e))
+                variant.EndTime = ScheduleExpander.FormatTime(e + TimeSpan.FromMinutes(delta));
+            if (_db != null)
+                _db.TaskTemplates.UpdateAsync(task).GetAwaiter().GetResult();
+        }
+        _pendingShifts = new();
         SaveNewTask();
     }
 
     [RelayCommand]
-    private void CancelShiftNext()
+    private void CancelShiftChain()
     {
-        IsShiftNextOpen = false;
-        _shiftNextTask = null;
-        _shiftNextVariant = null;
-        ValidationMessage = _shiftNextConflict;
+        IsShiftChainOpen = false;
+        _pendingShifts = new();
+        ValidationMessage = _shiftChainConflict;
     }
 
     [RelayCommand]
@@ -173,6 +263,7 @@ public partial class MainWindowViewModel
         TimeVariants.Clear();
         foreach (var v in SelectedTask.DayTimes)
             TimeVariants.Add(TaskTimeVariantViewModel.FromModel(v));
+        UpdateTimeVariantSeparators();
 
         ValidationMessage = string.Empty;
         IsEditing = true;

@@ -71,32 +71,32 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TaskTimeVariantViewModel">
                         <StackPanel Spacing="2" Margin="0,0,0,4">
-                            <StackPanel Spacing="4">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="{DynamicResource Remove}"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTimeVariantCommand}"
+                                        CommandParameter="{Binding}" />
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <TextBlock Text="{DynamicResource Start}" VerticalAlignment="Center" />
                                     <TextBox Text="{Binding StartText}" Width="80" PlaceholderText="07:30"
                                              TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="{DynamicResource End}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{DynamicResource End}" VerticalAlignment="Center" Margin="8,0,0,0" />
                                     <TextBox Text="{Binding EndText}" Width="80" PlaceholderText="07:30"
                                              TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
                                 </StackPanel>
-                            </StackPanel>
-                            <DockPanel Margin="0,2,0,0">
-                                <Button DockPanel.Dock="Right" Content="{DynamicResource Remove}"
-                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveTimeVariantCommand}"
-                                        CommandParameter="{Binding}" />
-                                <UniformGrid Rows="1" Columns="7">
-                                    <CheckBox Content="{DynamicResource Mon}" IsChecked="{Binding Mon}" />
-                                    <CheckBox Content="{DynamicResource Tue}" IsChecked="{Binding Tue}" />
-                                    <CheckBox Content="{DynamicResource Wed}" IsChecked="{Binding Wed}" />
-                                    <CheckBox Content="{DynamicResource Thu}" IsChecked="{Binding Thu}" />
-                                    <CheckBox Content="{DynamicResource Fri}" IsChecked="{Binding Fri}" />
-                                    <CheckBox Content="{DynamicResource Sat}" IsChecked="{Binding Sat}" />
-                                    <CheckBox Content="{DynamicResource Sun}" IsChecked="{Binding Sun}" />
-                                </UniformGrid>
                             </DockPanel>
+                            <StackPanel Orientation="Horizontal">
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Mon}" IsChecked="{Binding Mon}" Margin="0,0,8,0" />
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Tue}" IsChecked="{Binding Tue}" Margin="0,0,8,0" />
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Wed}" IsChecked="{Binding Wed}" Margin="0,0,8,0" />
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Thu}" IsChecked="{Binding Thu}" Margin="0,0,8,0" />
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Fri}" IsChecked="{Binding Fri}" Margin="0,0,8,0" />
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Sat}" IsChecked="{Binding Sat}" Margin="0,0,8,0" />
+                                    <CheckBox FlowDirection="RightToLeft" Padding="3,0,0,0" Content="{DynamicResource Sun}" IsChecked="{Binding Sun}" />
+                                </StackPanel>
+                            <Border Height="1" Margin="0,0,0,3"
+                                    IsVisible="{Binding !IsLast}"
+                                    Background="{DynamicResource WeekGridLineBrush}" />
                         </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
