@@ -224,6 +224,7 @@ public partial class MainWindowViewModel
     private void ConfirmShiftChain()
     {
         IsShiftChainOpen = false;
+        var changed = new List<TaskTemplate>();
         foreach (var (task, variant, delta) in _pendingShifts)
         {
             if (!ScheduleExpander.TryParseTime(variant.StartTime, out var s))
@@ -231,10 +232,12 @@ public partial class MainWindowViewModel
             variant.StartTime = ScheduleExpander.FormatTime(s + TimeSpan.FromMinutes(delta));
             if (ScheduleExpander.TryParseTime(variant.EndTime, out var e))
                 variant.EndTime = ScheduleExpander.FormatTime(e + TimeSpan.FromMinutes(delta));
-            if (_db != null)
-                _db.TaskTemplates.UpdateAsync(task).GetAwaiter().GetResult();
+            if (!changed.Contains(task))
+                changed.Add(task);
         }
         _pendingShifts = new();
+        if (changed.Count > 0 && _db != null)
+            _db.TaskTemplates.UpdateRangeAsync(changed).GetAwaiter().GetResult();
         SaveNewTask();
     }
 

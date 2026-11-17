@@ -51,14 +51,21 @@ internal sealed class SqliteRepository<T> : IRepository<T> where T : notnull
         await _db.InsertRowAsync(_table, id, json, ct);
     }
 
+    public async Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken ct = default)
+    {
+        foreach (var entity in entities)
+        {
+            var id = GetIdValue(entity);
+            var json = JsonSerializer.Serialize(entity, JsonOpts);
+            await _db.InsertRowAsync(_table, id, json, ct);
+        }
+    }
+
     public async Task DeleteAsync(object id, CancellationToken ct = default)
     {
         var idStr = id.ToString() ?? throw new ArgumentNullException(nameof(id));
         await _db.DeleteRowAsync(_table, idStr, ct);
     }
-
-    public Task EnsureCreatedAsync(CancellationToken ct = default)
-        => _db.EnsureCreatedAsync(ct);
 
     private string GetIdValue(T entity)
     {

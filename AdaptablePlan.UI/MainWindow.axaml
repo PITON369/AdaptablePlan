@@ -127,15 +127,17 @@
                     <StackPanel Spacing="16">
                         <TextBlock Foreground="{DynamicResource DialogCardForeground}"
                                    Text="{DynamicResource ShiftChainAsk}" />
-                        <ItemsControl ItemsSource="{Binding ShiftChainLines}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="sys:String">
-                                    <TextBlock Foreground="{DynamicResource DialogCardForeground}"
-                                               Text="{Binding}"
-                                               TextWrapping="Wrap" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ScrollViewer MaxHeight="480" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding ShiftChainLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                                   Text="{Binding}"
+                                                   TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
                             <Button Content="{DynamicResource Yes}" MinHeight="44" Padding="16,8"
                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"

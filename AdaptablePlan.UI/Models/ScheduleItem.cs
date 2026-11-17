@@ -43,15 +43,4 @@ public partial class ScheduleItem : ObservableObject
     public bool IsToday { get; init; }
 
     public string Activity => Template.Name;
-
-    public string DayName => Day switch
-    {
-        DayOfWeek.Monday => "Mon",
-        DayOfWeek.Tuesday => "Tue",
-        DayOfWeek.Wednesday => "Wed",
-        DayOfWeek.Thursday => "Thu",
-        DayOfWeek.Friday => "Fri",
-        DayOfWeek.Saturday => "Sat",
-        _ => "Sun",
-    };
 }

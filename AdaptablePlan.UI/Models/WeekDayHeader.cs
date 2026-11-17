@@ -7,7 +7,6 @@ namespace AdaptablePlan.UI.Models;
 public sealed class WeekDayHeader : ObservableObject
 {
     public string Name { get; init; } = string.Empty;
-    public DayOfWeek Day { get; init; }
     public DateTime Date { get; init; }
 
     // Ширина колонки дня — общая с WeekCell той же колонки.

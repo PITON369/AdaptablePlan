@@ -22,7 +22,7 @@
             <RadioButton Content="{DynamicResource Month}" IsChecked="{Binding IsMonthMode, Mode=TwoWay}" />
             <RadioButton Content="{DynamicResource Year}" IsChecked="{Binding IsYearMode, Mode=TwoWay}" />
             <RadioButton Content="{DynamicResource Custom}" IsChecked="{Binding IsCustomMode, Mode=TwoWay}" />
-            <ComboBox x:Name="CustomPagesCombo" Margin="16,0,0,0" MinWidth="160"
+            <ComboBox Margin="16,0,0,0" MinWidth="160"
                       IsEnabled="{Binding IsCustomMode}"
                       ItemsSource="{Binding CustomPageList}"
                       SelectedItem="{Binding SelectedCustomPage, Mode=TwoWay}">

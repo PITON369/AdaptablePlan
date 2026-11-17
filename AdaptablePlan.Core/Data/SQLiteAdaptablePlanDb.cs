@@ -119,15 +119,6 @@ internal sealed class SQLiteAdaptablePlanDb : IAdaptablePlanDb, IDisposable
         }
     }
 
-    internal async Task<string?> FindIdAsync(string table, string id, CancellationToken ct)
-    {
-        using var cmd = Connection.CreateCommand();
-        cmd.CommandText = $"SELECT Id FROM {table} WHERE Id = @p0";
-        cmd.Add(id);
-        using var reader = await cmd.ExecuteReaderAsync(ct);
-        return await reader.ReadAsync(ct) ? reader.GetString(0) : null;
-    }
-
     public async Task ClearAsync(CancellationToken ct = default)
     {
         var conn = Connection;

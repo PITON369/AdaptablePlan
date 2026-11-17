@@ -52,12 +52,22 @@ internal sealed class MongoRepository<T> : IRepository<T> where T : notnull
         return Task.CompletedTask;
     }
 
+    public Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken ct = default)
+    {
+        var models = entities.Select(e =>
+        {
+            var entityId = _idProperty?.GetValue(e)
+                ?? throw new InvalidOperationException($"Type {typeof(T).Name} has no Id value.");
+            return new ReplaceOneModel<T>(Builders<T>.Filter.Eq("_id", entityId), e);
+        }).ToList();
+        if (models.Count > 0)
+            _collection.BulkWrite(models, null, ct);
+        return Task.CompletedTask;
+    }
+
     public Task DeleteAsync(object id, CancellationToken ct = default)
     {
         _collection.DeleteOne(Builders<T>.Filter.Eq("_id", id), ct);
         return Task.CompletedTask;
     }
-
-    public Task EnsureCreatedAsync(CancellationToken ct = default)
-        => Task.CompletedTask;
 }

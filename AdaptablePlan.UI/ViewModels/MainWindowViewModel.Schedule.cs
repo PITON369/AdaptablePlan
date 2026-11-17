@@ -23,9 +23,6 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
 
-    [ObservableProperty]
-    private int _selectedCustomSlot;
-
     // Радио-кнопки режимов: двухсторонний биндинг на bool-свойства.
     public bool IsDayMode
     {
@@ -306,7 +303,6 @@ public partial class MainWindowViewModel
             WeekDayHeaders.Add(new WeekDayHeader
             {
                 Name = $"{ShortDayName(d.DayOfWeek)} {d.Day}",
-                Day = d.DayOfWeek,
                 Date = d,
             });
         _dayCellIndex = dates.Select((d, i) => (d, i)).ToDictionary(x => x.d, x => x.i);
@@ -486,6 +482,9 @@ public partial class MainWindowViewModel
     // Кнопка "Добавить после" в нижней панели: работает по выделенной таске,
     // как "Редактировать". Форма новой задачи с началом = конец выделенной
     // таски, днями её варианта и концом = старт следующего пункта дня.
+    // Время берётся базовое (плановое): отображаемое на сегодня отличается
+    // сдвигом дня, и оно вшилось бы в шаблон как его плановое время, а таска
+    // легла по порядку плана не после выделенной.
     [RelayCommand]
     private void AddTaskAfterSelected()
     {
@@ -499,7 +498,7 @@ public partial class MainWindowViewModel
         OpenNewTask();
         var current = TimeVariants[0];
         var variant = ScheduleExpander.VariantForDay(item.Template, item.Date.DayOfWeek);
-        current.StartText = item.EndTime;
+        current.StartText = item.BaseEndTime;
         if (variant != null)
             current.SetDays(variant.Days);
         var index = Schedule.IndexOf(item);
@@ -507,12 +506,12 @@ public partial class MainWindowViewModel
         {
             var next = Schedule[i];
             if (next.PlanDay != item.PlanDay
-                || !ScheduleExpander.TryParseTime(next.StartTime, out var nextStart))
+                || !ScheduleExpander.TryParseTime(next.BaseStartTime, out var nextStart))
                 continue;
             // Конец подставляем, только если следующий позже конца текущей:
             // иначе (пересечение, сдвиги) получился бы конец раньше начала.
-            if (ScheduleExpander.TryParseTime(item.EndTime, out var end) && nextStart > end)
-                current.EndText = next.StartTime;
+            if (ScheduleExpander.TryParseTime(item.BaseEndTime, out var end) && nextStart > end)
+                current.EndText = next.BaseStartTime;
             break;
         }
     }

@@ -122,16 +122,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private TaskTemplate _currentTask = new();
 
     [ObservableProperty]
-    private bool _isRecurring;
-
-    [ObservableProperty]
     private bool _isOneTime;
 
     [ObservableProperty]
     private bool _showDuration;
-
-    [ObservableProperty]
-    private bool _isRecurringOrThings;
 
     [ObservableProperty]
     private bool _startWeekOnMonday = true;
@@ -318,11 +312,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void SyncTaskTypeFlags()
     {
-        IsRecurring = CurrentTask.Type == TaskType.Recurring;
         IsOneTime = CurrentTask.Type == TaskType.OneTime;
         ShowTimeVariants = CurrentTask.Type != TaskType.OneTime;
         ShowDuration = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
-        IsRecurringOrThings = CurrentTask.Type == TaskType.Recurring || CurrentTask.Type == TaskType.Things;
         OnPropertyChanged(nameof(CurrentTaskTypeDescription));
     }
 
