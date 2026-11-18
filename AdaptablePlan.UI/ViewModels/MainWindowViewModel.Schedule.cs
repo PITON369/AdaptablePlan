@@ -101,6 +101,10 @@ public partial class MainWindowViewModel
     // обновления столбца Time при выборе таски.
     private Dictionary<DateTime, int>? _dayCellIndex;
 
+    // Положения задач в колонках дня для отрисовки rowspan (индекс по
+    // WeekDayHeaders); строятся в конце BuildWeekGrid.
+    public IReadOnlyList<WeekTaskPlacement>[] WeekDayPlacements { get; private set; } = Array.Empty<IReadOnlyList<WeekTaskPlacement>>();
+
     partial void OnSelectedItemChanged(ScheduleItem? value)
     {
         if (!ReferenceEquals(_lastSelectedItem, value))
@@ -308,6 +312,7 @@ public partial class MainWindowViewModel
         _dayCellIndex = dates.Select((d, i) => (d, i)).ToDictionary(x => x.d, x => x.i);
 
         var rawByDay = new Dictionary<DateTime, List<(TimeSpan Start, TimeSpan End, ScheduleItem Item)>>();
+        var dayStart = DayStart ?? new TimeSpan(7, 0, 0);
         foreach (var (date, items) in byDate)
         {
             // Бакет дня до начала недели (раннее утро первого дня) - не колонка сетки.
@@ -318,6 +323,14 @@ public partial class MainWindowViewModel
                 if (!ScheduleExpander.TryParseTime(item.StartTime, out var s)
                     || !ScheduleExpander.TryParseTime(item.EndTime, out var e))
                     continue;
+                // Ночные пункты план-дня (базовый старт до границы дня) - в конец
+                // дня, как в Day-списке: время сдвигаем на сутки вперёд, чтобы
+                // они легли в нижние строки сетки, а не в её верх.
+                if (ScheduleExpander.TryParseTime(item.BaseStartTime, out var bs) && bs < dayStart)
+                {
+                    s = s.Add(TimeSpan.FromHours(24));
+                    e = e.Add(TimeSpan.FromHours(24));
+                }
                 AddInterval(rawByDay, date, s, e, item);
             }
         }
@@ -369,6 +382,34 @@ public partial class MainWindowViewModel
 
         UpdateTimeLabels();
         UpdateColumnWidths();
+        BuildPlacements(dates);
+    }
+
+    // Строит положения задач по строкам WeekRows: подряд идущие строки одной
+    // задачи в колонке дня собираются в один placement со Span.
+    private void BuildPlacements(DateTime[] dates)
+    {
+        var placements = new List<WeekTaskPlacement>[dates.Length];
+        var open = new Dictionary<ScheduleItem, WeekTaskPlacement>[dates.Length];
+        for (int c = 0; c < dates.Length; c++)
+        {
+            placements[c] = new List<WeekTaskPlacement>();
+            open[c] = new Dictionary<ScheduleItem, WeekTaskPlacement>();
+        }
+        for (int r = 0; r < WeekRows.Count; r++)
+            for (int c = 0; c < dates.Length; c++)
+                foreach (var item in WeekRows[r].Cells[c].Tasks)
+                {
+                    if (open[c].TryGetValue(item, out var p))
+                        p.Span++;
+                    else
+                    {
+                        p = new WeekTaskPlacement { Task = item, Row = r, Span = 1 };
+                        open[c][item] = p;
+                        placements[c].Add(p);
+                    }
+                }
+        WeekDayPlacements = placements;
     }
 
     // Колонка дня занимает минимум (60), но расширяется под самую длинную

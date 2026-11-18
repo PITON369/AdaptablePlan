@@ -273,8 +273,32 @@ public partial class MainWindowViewModel
         IsNewTaskOpen = true;
     }
 
+    [ObservableProperty]
+    private bool _isDeleteTaskConfirmOpen;
+
+    [ObservableProperty]
+    private string _deleteTaskName = string.Empty;
+
     [RelayCommand]
     private void DeleteTask()
+    {
+        if (SelectedTask == null || _db == null || SelectedItem?.CustomSource != null)
+            return;
+        DeleteTaskName = SelectedTask.Name;
+        IsDeleteTaskConfirmOpen = true;
+    }
+
+    [RelayCommand]
+    private void ConfirmDeleteTask()
+    {
+        IsDeleteTaskConfirmOpen = false;
+        DeleteSelectedTask();
+    }
+
+    [RelayCommand]
+    private void CancelDeleteTask() => IsDeleteTaskConfirmOpen = false;
+
+    private void DeleteSelectedTask()
     {
         if (SelectedTask == null || _db == null || SelectedItem?.CustomSource != null)
             return;

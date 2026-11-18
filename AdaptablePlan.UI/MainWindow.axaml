@@ -149,6 +149,32 @@
                     </StackPanel>
                 </Border>
             </Border>
+            <!-- Подтверждение удаления выбранной таски -->
+            <Border IsVisible="{Binding IsDeleteTaskConfirmOpen}"
+                    Background="{DynamicResource DialogOverlayBackground}">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource DialogCardBackground}"
+                        BorderBrush="{DynamicResource WeekGridLineBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="24"
+                        MinWidth="280" MaxWidth="480">
+                    <StackPanel Spacing="16">
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   FontSize="20" FontWeight="Bold"
+                                   Text="{DynamicResource DeleteTaskConfirm}" />
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   Text="{Binding DeleteTaskName}"
+                                   TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                            <Button Content="{DynamicResource YesDelete}" MinHeight="44" Padding="16,8"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    Command="{Binding ConfirmDeleteTaskCommand}" />
+                            <Button Content="{DynamicResource Cancel}" MinHeight="44" Padding="16,8"
+                                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                    Command="{Binding CancelDeleteTaskCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Border>
             <!-- Нечего удалять: сообщение вместо пустого срабатывания кнопки -->
             <Border IsVisible="{Binding IsNoOneTimeOpen}"
                     Background="{DynamicResource DialogOverlayBackground}">

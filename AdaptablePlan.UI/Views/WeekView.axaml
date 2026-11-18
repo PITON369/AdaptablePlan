@@ -3,118 +3,48 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AdaptablePlan.UI.ViewModels"
-             xmlns:models="using:AdaptablePlan.UI.Models"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
              x:Class="AdaptablePlan.UI.Views.WeekView"
              x:DataType="vm:MainWindowViewModel">
     <UserControl.Styles>
-        <Style Selector="Border.selected">
+        <!-- Классы назначаются элементам, собранным в code-behind.
+             selected идёт после running, чтобы выделение побеждало. -->
+        <Style Selector="Button.task">
+            <Setter Property="Background" Value="{DynamicResource WeekGridTaskBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WeekGridTaskBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.task.running">
+            <Setter Property="Background" Value="{DynamicResource RunningBackground}" />
+        </Style>
+        <Style Selector="Button.task.selected">
+            <Setter Property="Background" Value="{DynamicResource WeekGridSelectedBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource WeekGridSelectedForeground}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.colhdr">
+            <Setter Property="Background" Value="{DynamicResource WeekGridHeaderBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WeekGridLineBrush}" />
+            <Setter Property="Padding" Value="4,3" />
+        </Style>
+        <Style Selector="Border.colhdr.selected">
             <Setter Property="Background" Value="{DynamicResource WeekGridSelectedBackground}" />
         </Style>
-        <Style Selector="Border.selected TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource WeekGridSelectedForeground}" />
+        <Style Selector="Border.timecol">
+            <Setter Property="Background" Value="{DynamicResource WeekGridTimeBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource WeekGridLineBrush}" />
+            <Setter Property="Padding" Value="4,2" />
         </Style>
-        <Style Selector="Button.running">
-            <Setter Property="Background" Value="{DynamicResource RunningBackground}" />
+        <Style Selector="Border.gridcell">
+            <Setter Property="BorderBrush" Value="{DynamicResource WeekGridLineBrush}" />
         </Style>
     </UserControl.Styles>
 
-    <!-- Week view: horizontal timetable (days on top, time on the left) -->
+    <!-- Таблица недели собирается в code-behind: задачи занимают одну ячейку
+         на все свои строки (Grid.RowSpan), поэтому пустых повторов нет. -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto">
-        <StackPanel>
-            <!-- Day headers -->
-            <StackPanel Orientation="Horizontal">
-                <Border Width="90" Padding="4,3"
-                        Background="{DynamicResource WeekGridHeaderBackground}"
-                        BorderBrush="{DynamicResource WeekGridLineBrush}"
-                        BorderThickness="1,1,1,1">
-                    <TextBlock Text="{DynamicResource Time}" FontWeight="SemiBold" TextAlignment="Right" />
-                </Border>
-                <ItemsControl ItemsSource="{Binding WeekDayHeaders}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:WeekDayHeader">
-                            <Border Width="{Binding ColumnWidth}" Padding="4,3"
-                                    Background="{DynamicResource WeekGridHeaderBackground}"
-                                    BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                    BorderThickness="0,1,1,1"
-                                    Classes.selected="{Binding IsSelected}">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                           TextAlignment="Center" />
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-
-            <!-- Time rows -->
-            <ItemsControl ItemsSource="{Binding WeekRows}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:WeekRow">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Width="90" Padding="4,2"
-                                    Background="{DynamicResource WeekGridTimeBackground}"
-                                    BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                    BorderThickness="1,1,0,1">
-                                <TextBlock Text="{Binding TimeLabel}" FontSize="11"
-                                           TextAlignment="Right" TextWrapping="Wrap" />
-                            </Border>
-                            <ItemsControl ItemsSource="{Binding Cells}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:WeekCell">
-                                        <Border Width="{Binding ColumnWidth}" MinHeight="22" Padding="1"
-                                                BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                                BorderThickness="0,1,1,1">
-                                            <ItemsControl ItemsSource="{Binding Tasks}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="models:ScheduleItem">
-                                                        <Button FontSize="11"
-                                                                Padding="3,1"
-                                                                MinHeight="18"
-                                                                HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Left"
-                                                                Click="OnCellButtonClick"
-                                                                Classes.selected="{Binding IsSelected}"
-                                                                Classes.running="{Binding IsRunning}">
-                                                            <TextBlock Text="{Binding Activity}"
-                                                                       TextTrimming="CharacterEllipsis" />
-                                                            <Button.Styles>
-                                                                <Style Selector="Button">
-                                                                    <Setter Property="Background"
-                                                                            Value="Transparent" />
-                                                                    <Setter Property="BorderThickness"
-                                                                            Value="0" />
-                                                                </Style>
-                                                                <Style Selector="Button.selected">
-                                                                    <Setter Property="Background"
-                                                                            Value="{DynamicResource WeekGridSelectedBackground}" />
-                                                                    <Setter Property="Foreground"
-                                                                            Value="{DynamicResource WeekGridSelectedForeground}" />
-                                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                                </Style>
-                                                            </Button.Styles>
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
+        <Grid x:Name="Table" />
     </ScrollViewer>
 </UserControl>

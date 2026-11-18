@@ -136,6 +136,7 @@ public static class Strings
         ["DeleteDatabase"] = ("Delete database", "Удалить базу данных"),
         ["DeletePastOneTime"] = ("Delete past one-time tasks", "Удалить прошедшие разовые таски"),
         ["DeleteOldOneTime"] = ("Delete these one-time tasks?", "Удалить эти разовые таски?"),
+        ["DeleteTaskConfirm"] = ("Delete this task?", "Удалить эту таску?"),
         ["NoOneTimeTasks"] = ("No one-time tasks to delete", "Разовые таски отсутствуют"),
         ["DeleteConfirm"] = ("Delete all data? This cannot be undone.",
             "Удалить все данные? Это действие нельзя отменить."),
