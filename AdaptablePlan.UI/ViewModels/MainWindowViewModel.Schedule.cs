@@ -83,12 +83,17 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(SelectedDateText));
         OnPropertyChanged(nameof(ChecklistEntries));
         OnPropertyChanged(nameof(ChecklistTitle));
+        OnPropertyChanged(nameof(CurrentPlanTitle));
+        OnPropertyChanged(nameof(PlanWeeks));
+        RebuildMonthPlanGrid();
         RegenerateSchedule();
     }
 
     partial void OnSelectedDateChanged(DateTime value)
     {
         OnPropertyChanged(nameof(SelectedDateText));
+        OnPropertyChanged(nameof(CurrentPlanTitle));
+        RebuildMonthPlanGrid();
         RegenerateSchedule();
         OnPropertyChanged(nameof(CustomConflictText));
     }

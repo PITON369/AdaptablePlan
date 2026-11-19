@@ -9,11 +9,10 @@
     <UserControl.Resources>
         <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
     </UserControl.Resources>
-    <Grid RowDefinitions="*,Auto">
-        <ScrollViewer Grid.Row="0">
-            <StackPanel Margin="16" Spacing="16" MaxWidth="1200" HorizontalAlignment="Left">
+    <ScrollViewer>
+        <StackPanel Margin="16" Spacing="16" MaxWidth="1200" HorizontalAlignment="Left">
 
-                <TextBlock Text="{Binding CurrentPlan.Title}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding CurrentPlanTitle}" FontSize="18" FontWeight="SemiBold" />
 
             <!-- Хочу научиться -->
             <StackPanel Spacing="4">
@@ -192,10 +191,13 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- Сетка 4 недель: 7 колонок по дням, в каждой ячейке свой список планов -->
-            <ItemsControl ItemsSource="{Binding CurrentPlan.Weeks}">
+            <!-- Сетка недель: у месяца реальные недели выбранного месяца
+                 с датами, дни вне месяца скрыты; у года - фиксированные
+                 4 недели по дням без дат -->
+            <ItemsControl ItemsSource="{Binding PlanWeeks}"
+                          IsVisible="{Binding IsMonthMode}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:PlanWeekViewModel">
+                    <DataTemplate x:DataType="vm:PlanMonthWeekViewModel">
                         <StackPanel Spacing="4" Margin="0,0,0,8">
                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
                             <ItemsControl ItemsSource="{Binding Days}">
@@ -205,9 +207,14 @@
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:PlanDayCellViewModel">
-                                        <TextBlock Text="{Binding DayName}" FontWeight="SemiBold"
-                                                   HorizontalAlignment="Center" />
+                                    <DataTemplate x:DataType="vm:PlanMonthDayViewModel">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="4"
+                                                    HorizontalAlignment="Center"
+                                                    IsVisible="{Binding IsReal}">
+                                            <TextBlock Text="{Binding DayName}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding DateText}" />
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -218,10 +225,11 @@
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:PlanDayCellViewModel">
+                                    <DataTemplate x:DataType="vm:PlanMonthDayViewModel">
                                         <Border Background="{DynamicResource WeekGridHeaderBackground}"
                                                 BorderBrush="{DynamicResource WeekGridLineBrush}"
-                                                BorderThickness="0,0,1,1" MinHeight="90">
+                                                BorderThickness="0,0,1,1" MinHeight="90"
+                                                IsVisible="{Binding IsReal}">
                                             <StackPanel Spacing="2" Margin="4">
                                                 <ItemsControl ItemsSource="{Binding Items.Items}">
                                                     <ItemsControl.ItemTemplate>
@@ -253,13 +261,48 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            </StackPanel>
-        </ScrollViewer>
+            <!-- Сетка года: месяцы с января по декабрь, всегда 4 столбца,
+                 3 строки; у каждой ячейки свой список планов -->
+            <ItemsControl ItemsSource="{Binding CurrentPlan.Months}"
+                          IsVisible="{Binding IsYearMode}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PlanYearMonthViewModel">
+                        <Border Background="{DynamicResource WeekGridHeaderBackground}"
+                                BorderBrush="{DynamicResource WeekGridLineBrush}"
+                                BorderThickness="0,0,1,1" MinHeight="110">
+                            <StackPanel Spacing="2" Margin="4">
+                                <TextBlock Text="{Binding MonthName}" FontWeight="SemiBold" />
+                                <ItemsControl ItemsSource="{Binding Items.Items}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PlanEntryViewModel">
+                                            <StackPanel Spacing="2">
+                                                <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                                                <Button Content="✕" Padding="2,0"
+                                                        HorizontalAlignment="Left"
+                                                        Command="{Binding RemoveCommand}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <StackPanel Orientation="Horizontal" Spacing="2">
+                                    <TextBox MinWidth="60" HorizontalAlignment="Stretch"
+                                             PlaceholderText="{DynamicResource AddPlan}"
+                                             Text="{Binding Items.NewItemText, Mode=TwoWay}" />
+                                    <Button Content="+" MinWidth="28"
+                                            Command="{Binding Items.AddCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-        <!-- Close закреплена снизу: видна при любой прокрутке -->
-        <Border Grid.Row="1" Background="{DynamicResource WeekGridHeaderBackground}" Padding="16,8">
-            <Button Content="{DynamicResource Close}" HorizontalAlignment="Right" MinWidth="120"
-                    Command="{Binding ClosePlanCommand}" />
-        </Border>
-    </Grid>
+            </StackPanel>
+    </ScrollViewer>
 </UserControl>

@@ -29,6 +29,7 @@ public class PlanPage
     public List<PlanEntry> Courses { get; set; } = new();
     public List<PlanEntry> Events { get; set; } = new();
     public List<PlanWeek> Weeks { get; set; } = new();
+    public List<PlanMonthCell> Months { get; set; } = new();
 }
 
 [BsonIgnoreExtraElements]
@@ -61,5 +62,13 @@ public class PlanWeek
 public class PlanDayCell
 {
     public int DayIndex { get; set; }
+    public List<PlanEntry> Items { get; set; } = new();
+}
+
+// Ячейка месяца годового плана (1..12) со своими пунктами.
+[BsonIgnoreExtraElements]
+public class PlanMonthCell
+{
+    public int Month { get; set; }
     public List<PlanEntry> Items { get; set; } = new();
 }

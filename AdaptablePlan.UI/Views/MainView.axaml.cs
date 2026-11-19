@@ -39,8 +39,8 @@ public partial class MainView : UserControl
         ScheduleHost.Content = _vm.Mode switch
         {
             ScheduleMode.Week => new WeekView(),
-            ScheduleMode.Month => new MonthView(),
-            ScheduleMode.Year => new YearView(),
+            ScheduleMode.Month => new PlanView(),
+            ScheduleMode.Year => new PlanView(),
             ScheduleMode.Custom => new CustomPageView(),
             _ => new DayView(),
         };

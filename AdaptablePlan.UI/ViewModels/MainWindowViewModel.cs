@@ -654,7 +654,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OpenSettings()
     {
         ConfirmDeleteDb = false;
-        IsPlanOpen = false;
         IsSettingsOpen = true;
     }
 

@@ -1,37 +1,107 @@
 using AdaptablePlan.Core.Data;
 using AdaptablePlan.Core.Models;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using AdaptablePlan.UI.Localization;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 
 namespace AdaptablePlan.UI.ViewModels;
 
 // Экран "Планы" (цели и задачи): общие план месяца и план года,
-// открывается кнопкой в режимах Month и Year.
+// показываются сразу в режимах Month и Year.
 public partial class MainWindowViewModel
 {
-    [ObservableProperty]
-    private bool _isPlanOpen;
-
     public PlanPageViewModel? MonthPlan { get; private set; }
     public PlanPageViewModel? YearPlan { get; private set; }
 
     public PlanPageViewModel? CurrentPlan
         => Mode == ScheduleMode.Month ? MonthPlan : YearPlan;
 
-    [RelayCommand]
-    private void OpenPlan()
+    // Заголовок плана: "План месяца ноябрь" / "План года 2026"
+    // (по выбранной дате). Сетка недель плана месяца тоже следует за ней.
+    public string CurrentPlanTitle
     {
-        IsSettingsOpen = false;
-        IsPlanOpen = true;
+        get
+        {
+            if (CurrentPlan == null)
+                return string.Empty;
+            return CurrentPlan == MonthPlan
+                ? Strings.Format("PlanMonthName",
+                    SelectedDate.ToString("MMMM", new CultureInfo(Strings.Language)))
+                : Strings.Format("PlanYearName", SelectedDate.Year);
+        }
     }
 
-    [RelayCommand]
-    private void ClosePlan() => IsPlanOpen = false;
+    // Строки сетки недель плана месяца - реальные недели месяца SelectedDate,
+    // дни вне месяца скрыты.
+    public IReadOnlyList<PlanMonthWeekViewModel> PlanWeeks
+    {
+        get
+        {
+            if (_monthGridWeeks == null)
+                RebuildMonthPlanGrid();
+            return _monthGridWeeks!;
+        }
+    }
 
-    partial void OnIsPlanOpenChanged(bool value) => OnPropertyChanged(nameof(CurrentPlan));
+    private List<PlanMonthWeekViewModel> _monthGridWeeks = new();
+
+    private void RebuildMonthPlanGrid()
+    {
+        var monthList = new List<PlanMonthWeekViewModel>();
+        var plan = MonthPlan;
+        if (plan != null)
+        {
+            var first = new DateTime(SelectedDate.Year, SelectedDate.Month, 1);
+            // Сдвиг 1-го числа от понедельника (сетка всегда Пн..Вс).
+            var offset = ((int)first.DayOfWeek + 6) % 7;
+            var daysInMonth = DateTime.DaysInMonth(first.Year, first.Month);
+            var weekCount = (offset + daysInMonth + 6) / 7;
+            var gridStart = first.AddDays(-offset);
+            for (var w = 1; w <= weekCount; w++)
+            {
+                var modelWeek = EnsureWeek(plan.Model, w);
+                var days = new List<PlanMonthDayViewModel>();
+                for (var i = 0; i < 7; i++)
+                {
+                    var date = gridStart.AddDays(7 * (w - 1) + i);
+                    if (date.Month != first.Month)
+                    {
+                        days.Add(new PlanMonthDayViewModel(null, null, null));
+                        continue;
+                    }
+                    var cell = modelWeek.Days.FirstOrDefault(c => c.DayIndex == i);
+                    if (cell == null)
+                    {
+                        cell = new PlanDayCell { DayIndex = i };
+                        modelWeek.Days.Add(cell);
+                    }
+                    days.Add(new PlanMonthDayViewModel(date, cell, plan));
+                }
+                monthList.Add(new PlanMonthWeekViewModel(w, days));
+            }
+        }
+        _monthGridWeeks = monthList;
+        OnPropertyChanged(nameof(PlanWeeks));
+    }
+
+    // Недостающие недели сетки (5-я, 6-я в длинных месяцах) дозаводятся
+    // в модели; сохранятся вместе со страницей при первой правке данных.
+    private static PlanWeek EnsureWeek(PlanPage model, int number)
+    {
+        var week = model.Weeks.FirstOrDefault(w => w.Number == number);
+        if (week != null)
+            return week;
+        week = new PlanWeek
+        {
+            Number = number,
+            Days = Enumerable.Range(0, 7).Select(i => new PlanDayCell { DayIndex = i }).ToList(),
+        };
+        model.Weeks.Add(week);
+        return week;
+    }
 
     private void LoadPlanPages(IAdaptablePlanDb db)
     {
@@ -61,6 +131,7 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(MonthPlan));
         OnPropertyChanged(nameof(YearPlan));
         OnPropertyChanged(nameof(CurrentPlan));
+        RebuildMonthPlanGrid();
     }
 
     private void SavePlanPage(PlanPageViewModel page)

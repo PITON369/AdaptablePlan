@@ -172,6 +172,8 @@ public static class Strings
         ["Events"] = ("Events", "Мероприятия"),
         ["PlansForMonth"] = ("Plans for the month", "Планы на месяц"),
         ["PlansForYear"] = ("Plans for the year", "Планы на год"),
+        ["PlanMonthName"] = ("Month plan - {0}", "План месяца {0}"),
+        ["PlanYearName"] = ("Year plan - {0}", "План года {0}"),
 
         // Оверлей времени
         ["TimeIsUp"] = ("Time is up!", "Время вышло!"),

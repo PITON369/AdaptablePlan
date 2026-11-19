@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Linq;
 
@@ -29,8 +30,11 @@ public partial class PlanPageViewModel : ObservableObject
         Events = new PlanListViewModel(model.Events, Save);
         Spheres = new ObservableCollection<PlanSphereViewModel>(
             model.Spheres.Select(s => new PlanSphereViewModel(s, this)));
-        Weeks = new ObservableCollection<PlanWeekViewModel>(
-            model.Weeks.OrderBy(w => w.Number).Select(w => new PlanWeekViewModel(w, this)));
+        for (var m = 1; m <= 12; m++)
+            if (!model.Months.Any(c => c.Month == m))
+                model.Months.Add(new PlanMonthCell { Month = m });
+        Months = new ObservableCollection<PlanYearMonthViewModel>(
+            model.Months.OrderBy(c => c.Month).Select(c => new PlanYearMonthViewModel(c, this)));
     }
 
     public PlanPage Model { get; }
@@ -45,7 +49,7 @@ public partial class PlanPageViewModel : ObservableObject
     public PlanListViewModel Events { get; }
 
     public ObservableCollection<PlanSphereViewModel> Spheres { get; }
-    public ObservableCollection<PlanWeekViewModel> Weeks { get; }
+    public ObservableCollection<PlanYearMonthViewModel> Months { get; }
 
     public void Save() => _save(this);
 
@@ -166,48 +170,71 @@ public partial class PlanSphereViewModel : ObservableObject
     private void RemoveSelf() => _owner.RemoveSphere(this);
 }
 
-// Неделя сетки: заголовок и 7 ячеек по дням Пн..Вс.
-public class PlanWeekViewModel
+// Ячейка месяца в годовом плане: заголовок и свой список пунктов.
+public class PlanYearMonthViewModel
 {
-    private readonly PlanPageViewModel _owner;
-
-    public PlanWeekViewModel(PlanWeek model, PlanPageViewModel owner)
+    public PlanYearMonthViewModel(PlanMonthCell model, PlanPageViewModel page)
     {
-        _owner = owner;
-        Title = Strings.Format("WeekN", model.Number);
-        Days = new ObservableCollection<PlanDayCellViewModel>(
-            model.Days.OrderBy(d => d.DayIndex).Select(d => new PlanDayCellViewModel(d, this)));
+        MonthName = new DateTime(2000, model.Month, 1)
+            .ToString("MMMM", new CultureInfo(Strings.Language));
+        Items = new PlanListViewModel(model.Items, () => page.Save());
+    }
+
+    public string MonthName { get; }
+
+    public PlanListViewModel Items { get; }
+}
+
+// Неделя реального календаря выбранного месяца: 7 слотов Пн..Вс, у дней
+// вне месяца содержимое пустое.
+public class PlanMonthWeekViewModel
+{
+    public PlanMonthWeekViewModel(int number, List<PlanMonthDayViewModel> days)
+    {
+        Title = Strings.Format("WeekN", number);
+        Days = days;
     }
 
     public string Title { get; }
-    public ObservableCollection<PlanDayCellViewModel> Days { get; }
-
-    internal void Save() => _owner.Save();
+    public List<PlanMonthDayViewModel> Days { get; }
 }
 
-public class PlanDayCellViewModel
+// Ячейка дня сетки плана месяца с датой ("2 ноя") либо пустой слот.
+public class PlanMonthDayViewModel
 {
-    private readonly PlanWeekViewModel _week;
+    private readonly DateTime? _date;
+    private readonly PlanPageViewModel? _page;
 
-    public PlanDayCellViewModel(PlanDayCell model, PlanWeekViewModel week)
+    public PlanMonthDayViewModel(DateTime? date, PlanDayCell? cell, PlanPageViewModel? page)
     {
-        Model = model;
-        _week = week;
-        Items = new PlanListViewModel(model.Items, () => _week.Save());
+        _date = date;
+        _page = page;
+        // Пустой слот дня вне месяца: список неотличим от обычного, чтобы
+        // привязки в шаблоне не падали, - редактировать его нельзя, ячейка
+        // скрыта по IsReal.
+        Items = date == null || cell == null || page == null
+            ? new PlanListViewModel(new List<PlanEntry>(), () => { })
+            : new PlanListViewModel(cell.Items, () => page.Save());
     }
 
-    public PlanDayCell Model { get; }
+    public bool IsReal => _date != null;
 
-    public string DayName => Model.DayIndex switch
-    {
-        0 => Strings.Get("Mon"),
-        1 => Strings.Get("Tue"),
-        2 => Strings.Get("Wed"),
-        3 => Strings.Get("Thu"),
-        4 => Strings.Get("Fri"),
-        5 => Strings.Get("Sat"),
-        _ => Strings.Get("Sun"),
-    };
+    public string DayName => _date == null
+        ? string.Empty
+        : _date.Value.DayOfWeek switch
+        {
+            DayOfWeek.Monday => Strings.Get("Mon"),
+            DayOfWeek.Tuesday => Strings.Get("Tue"),
+            DayOfWeek.Wednesday => Strings.Get("Wed"),
+            DayOfWeek.Thursday => Strings.Get("Thu"),
+            DayOfWeek.Friday => Strings.Get("Fri"),
+            DayOfWeek.Saturday => Strings.Get("Sat"),
+            _ => Strings.Get("Sun"),
+        };
+
+    public string DateText => _date == null
+        ? string.Empty
+        : _date.Value.ToString("d MMM", new CultureInfo(Strings.Language));
 
     public PlanListViewModel Items { get; }
 }
