@@ -218,7 +218,10 @@ public partial class MainWindowViewModel
                     BaseStartTime = baseTimes.Item1,
                     BaseEndTime = baseTimes.Item2,
                     IsToday = planDay == planToday,
+                    // Галочки относятся к своей дате: запись вчерашнего дня
+                    // не должна помечать выполненными сегодняшний план.
                     IsDone = planDay == planToday && _dayOffset != null
+                        && _dayOffset.Date == planToday.ToString("yyyy-MM-dd")
                         && _dayOffset.DoneTaskIds.Contains(t.Id),
                 };
                 if (!byDate.TryGetValue(planDay, out var list))
