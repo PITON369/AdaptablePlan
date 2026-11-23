@@ -566,6 +566,78 @@ public partial class MainWindowViewModel
     }
 
 
+    // Свап соседних тасок дня: пара меняется местами, каждая сохраняет свою
+    // длительность. Таска, уходящая вниз, встаёт под конец слота соседа,
+    // уходящая вверх — на его старт; соседу достаётся освободившийся край
+    // (10:30-11:00 и 11:00-12:00 -> 10:30-11:30 и 11:30-12:00).
+    // Меняются плановые времена, как в сдвиге цепочки: перестановка пишется
+    // в вариант шаблона в БД и переносится на другие дни.
+    [RelayCommand]
+    private void SwapTaskUp() => SwapTask(down: false);
+
+    [RelayCommand]
+    private void SwapTaskDown() => SwapTask(down: true);
+
+    private void SwapTask(bool down)
+    {
+        var item = SelectedItem;
+        if (item == null || item.CustomSource != null)
+            return;
+        var index = Schedule.IndexOf(item);
+        var neighbourIndex = down ? index + 1 : index - 1;
+        if (index < 0 || neighbourIndex < 0 || neighbourIndex >= Schedule.Count)
+            return;
+        var other = Schedule[neighbourIndex];
+        if (other.PlanDay != item.PlanDay)
+            return;
+
+        var (start, itemEnd0) = BaseInterval(item);
+        var (otherStart, otherEnd0) = BaseInterval(other);
+        if (start == null || otherStart == null)
+            return;
+        // Таска через полночь: конец меньше старта — длительность за полночь.
+        var itemEnd = itemEnd0 == null ? TimeSpan.MinValue
+            : itemEnd0.Value <= start.Value ? itemEnd0.Value.Add(TimeSpan.FromHours(24)) : itemEnd0.Value;
+        var otherEnd = otherEnd0 == null ? TimeSpan.MinValue
+            : otherEnd0.Value <= otherStart.Value ? otherEnd0.Value.Add(TimeSpan.FromHours(24)) : otherEnd0.Value;
+        var itemDuration = itemEnd - start.Value;
+        var otherDuration = otherEnd - otherStart.Value;
+        if (itemDuration <= TimeSpan.Zero || otherDuration <= TimeSpan.Zero)
+            return;
+
+        var (newItemStart, newOtherStart) = down
+            ? (otherEnd - itemDuration, start.Value)
+            : (otherStart.Value, otherStart.Value + itemDuration);
+
+        var itemVariant = VariantWithInterval(item.Template, start.Value, itemEnd);
+        var otherVariant = VariantWithInterval(other.Template, otherStart.Value, otherEnd);
+        if (itemVariant == null || otherVariant == null)
+            return;
+
+        itemVariant.StartTime = ScheduleExpander.FormatTime(newItemStart);
+        itemVariant.EndTime = ScheduleExpander.FormatTime(newItemStart + itemDuration);
+        otherVariant.StartTime = ScheduleExpander.FormatTime(newOtherStart);
+        otherVariant.EndTime = ScheduleExpander.FormatTime(newOtherStart + otherDuration);
+
+        if (_db != null && !ReferenceEquals(item.Template, other.Template))
+            _db.TaskTemplates.UpdateRangeAsync([item.Template, other.Template]).GetAwaiter().GetResult();
+        RegenerateSchedule();
+        // После RegenerateSchedule ссылки устаревают — выделяем таску заново,
+        // чтобы можно было двигать её дальше по нескольку раз подряд.
+        var moved = Schedule.FirstOrDefault(i =>
+            i.Template.Id == item.Template.Id && i.Date == item.Date && i.PlanDay == item.PlanDay);
+        if (moved != null)
+            SelectedItem = moved;
+    }
+
+    // Вариант шаблона, дающий базовый интервал пункта расписания.
+    private static TaskTimeVariant? VariantWithInterval(TaskTemplate template, TimeSpan start, TimeSpan end)
+        => template.DayTimes.FirstOrDefault(v =>
+        {
+            var (s, e) = ScheduleExpander.VariantInterval(template, v);
+            return s == start && e == end;
+        });
+
     [RelayCommand]
     private void NextPeriod() => ShiftPeriod(1);
 
