@@ -97,7 +97,8 @@
                 <TextBox Width="110"
                                 IsVisible="{Binding IsDayModeAndManualMode}"
                                 IsEnabled="{Binding !IsSimpleTimerRunning}"
-                                Text="{Binding SimpleTimerManualMinutes, Mode=TwoWay}" />
+                                Text="{Binding SimpleTimerManualMinutes, Mode=TwoWay}"
+                                TextInput="OnDigitsTextInput" TextChanged="OnDigitsTextChanged" />
                 <Button Content="{DynamicResource TimerStart}"
                         IsVisible="{Binding IsDayMode}"
                         IsEnabled="{Binding !IsSimpleTimerRunning}"

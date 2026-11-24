@@ -46,6 +46,9 @@ public class PlanEntry
 public class PlanSphere
 {
     public Guid Id { get; set; }
+
+    // Ключ локализации дефолтной сферы ("Профессия" и т.п.); пусто - имя написал пользователь.
+    public string LocKey { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public List<PlanEntry> Items { get; set; } = new();
 }

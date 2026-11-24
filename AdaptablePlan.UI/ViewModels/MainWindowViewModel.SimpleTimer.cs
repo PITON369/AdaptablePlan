@@ -24,8 +24,10 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private bool _isSimpleTimerManual;
 
+    // Ручные минуты - строкой: разбор только через TryParse при старте,
+    // иначе TextBox с любым текстом бросает исключение привязки.
     [ObservableProperty]
-    private decimal _simpleTimerManualMinutes = 25;
+    private string _simpleTimerManualMinutes = "25";
 
     // Видимость: комбобокс и поле ввода чередуются по переключателю,
     // и оба показываются только в режиме Day
@@ -54,7 +56,9 @@ public partial class MainWindowViewModel
     private void StartSimpleTimer()
     {
         StopSimpleTimer();
-        var minutes = IsSimpleTimerManual ? (int)SimpleTimerManualMinutes : SimpleTimerMinutes;
+        var minutes = IsSimpleTimerManual
+            ? (int.TryParse(SimpleTimerManualMinutes, out var m) ? m : 0)
+            : SimpleTimerMinutes;
         if (minutes <= 0)
             return;
         _simpleTimerTarget = DateTime.Now.AddMinutes(minutes);
@@ -69,7 +73,11 @@ public partial class MainWindowViewModel
     private void CancelSimpleTimer() => StopSimpleTimer();
 
     [RelayCommand]
-    private void OkSimpleTimerDone() => IsSimpleTimerDone = false;
+    private void OkSimpleTimerDone()
+    {
+        IsSimpleTimerDone = false;
+        SoundPlayer.Stop();
+    }
 
     private void StopSimpleTimer()
     {

@@ -1,5 +1,6 @@
 using AdaptablePlan.UI.ViewModels;
 using Avalonia.Controls;
+using Avalonia.Input;
 using System.ComponentModel;
 
 namespace AdaptablePlan.UI.Views;
@@ -45,4 +46,8 @@ public partial class MainView : UserControl
             _ => new DayView(),
         };
     }
+
+    private void OnDigitsTextInput(object? sender, TextInputEventArgs e) => DigitsBox.OnTextInput(sender, e);
+
+    private void OnDigitsTextChanged(object? sender, TextChangedEventArgs e) => DigitsBox.OnTextChanged(sender, e);
 }

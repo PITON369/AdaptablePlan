@@ -86,6 +86,7 @@ public partial class MainWindowViewModel
     private async Task OkTimeUp()
     {
         IsTimeUpOpen = false;
+        SoundPlayer.Stop();
         if (IsTaskRunning)
         {
             await FinishRunningTaskAsync();

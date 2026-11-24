@@ -55,7 +55,7 @@ public static class TimeBox
         box.CaretIndex = previous.Length;
     }
 
-    private static int IndexAfterDigits(string text, int count)
+    internal static int IndexAfterDigits(string text, int count)
     {
         var seen = 0;
         for (var i = 0; i < text.Length; i++)

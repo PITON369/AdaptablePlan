@@ -144,8 +144,13 @@ public partial class MainWindowViewModel
         {
             Id = Guid.NewGuid(),
             Kind = kind,
-            Spheres = new[] { "Профессия", "Спорт", "Язык" }
-                .Select(n => new PlanSphere { Id = Guid.NewGuid(), Name = n })
+            Spheres = new (string LocKey, string Name)[]
+                {
+                    ("SphereProfession", "Профессия"),
+                    ("SphereSport", "Спорт"),
+                    ("SphereLanguage", "Язык"),
+                }
+                .Select(t => new PlanSphere { Id = Guid.NewGuid(), LocKey = t.LocKey, Name = t.Name })
                 .ToList(),
             Weeks = Enumerable.Range(1, 4).Select(n => new PlanWeek
             {

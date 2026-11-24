@@ -20,6 +20,7 @@ internal static class SoundPlayer
     private const int SND_ASYNC = 0x1;
     private const int SND_FILENAME = 0x20000;
     private const int SND_ALIAS = 0x40000;
+    private const int SND_PURGE = 0x40;
 
     public static void Play(string? file)
     {
@@ -35,6 +36,17 @@ internal static class SoundPlayer
             PlayMp3(path);
         else
             PlaySound(path, IntPtr.Zero, SND_FILENAME | SND_ASYNC);
+    }
+
+    public static void Stop()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+        // PlaySound держит один звук на процесс, SND_PURGE глушит его (и системный алиас);
+        // mp3 останавливается через MCI.
+        PlaySound(null, IntPtr.Zero, SND_PURGE);
+        mciSendString("stop planSound", null, 0, IntPtr.Zero);
+        mciSendString("close planSound", null, 0, IntPtr.Zero);
     }
 
     private static void PlayMp3(string path)

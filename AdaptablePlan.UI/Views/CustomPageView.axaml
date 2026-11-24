@@ -82,8 +82,10 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource Start}" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
-                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource End}" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" Width="80" PlaceholderText="{DynamicResource Start}" Text="{Binding NewCustomEntryStart, Mode=TwoWay}"
+                             TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
+                    <TextBox MinWidth="60" Width="80" PlaceholderText="{DynamicResource End}" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}"
+                             TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
                     <TextBox MinWidth="220" PlaceholderText="{DynamicResource NewItem}" Text="{Binding NewCustomEntryText, Mode=TwoWay}" />
                     <Button Content="{DynamicResource Add}" Command="{Binding AddCustomEntryCommand}" />
                 </StackPanel>
@@ -124,8 +126,10 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource Start}" Text="{Binding NewCustomEntryStart, Mode=TwoWay}" />
-                    <TextBox MinWidth="60" PlaceholderText="{DynamicResource End}" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}" />
+                    <TextBox MinWidth="60" Width="80" PlaceholderText="{DynamicResource Start}" Text="{Binding NewCustomEntryStart, Mode=TwoWay}"
+                             TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
+                    <TextBox MinWidth="60" Width="80" PlaceholderText="{DynamicResource End}" Text="{Binding NewCustomEntryEnd, Mode=TwoWay}"
+                             TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
                     <ComboBox MinWidth="100"
                               ItemsSource="{Binding WeekDays}"
                               SelectedItem="{Binding NewCustomEntryDay, Mode=TwoWay}" />

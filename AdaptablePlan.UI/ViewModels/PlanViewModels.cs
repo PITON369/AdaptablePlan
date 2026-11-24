@@ -14,12 +14,21 @@ namespace AdaptablePlan.UI.ViewModels;
 // Любое изменение данных автосохраняется через колбэк Save.
 public partial class PlanPageViewModel : ObservableObject
 {
+    private static readonly string[] DefaultSphereLocKeys =
+        { "SphereProfession", "SphereSport", "SphereLanguage" };
+
     private readonly Action<PlanPageViewModel> _save;
 
     public PlanPageViewModel(PlanPage model, Action<PlanPageViewModel> save)
     {
         Model = model;
         _save = save;
+        // Страницам, созданным до LocKey, ключ проставляется по совпадению имени
+        // с дефолтной сферой (любого языка).
+        foreach (var sphere in model.Spheres)
+            if (sphere.LocKey.Length == 0)
+                sphere.LocKey = DefaultSphereLocKeys
+                    .FirstOrDefault(k => Strings.Get(k) == sphere.Name) ?? "";
         Title = Strings.Get(model.Kind == PlanPageKind.Month ? "PlanMonth" : "PlanYear");
         Learn = new PlanListViewModel(model.Learn, Save);
         Improve = new PlanListViewModel(model.Improve, Save);
@@ -160,8 +169,18 @@ public partial class PlanSphereViewModel : ObservableObject
 
     public string Name
     {
-        get => Model.Name;
-        set { Model.Name = value; OnPropertyChanged(); _owner.Save(); }
+        get => Model.LocKey.Length > 0 ? Strings.Get(Model.LocKey) : Model.Name;
+        set
+        {
+            // Запись в TextBox неизменённого локализованного имени (потеря фокуса)
+            // не должна отнимать локализацию.
+            if (Model.LocKey.Length > 0 && value == Strings.Get(Model.LocKey))
+                return;
+            Model.Name = value;
+            Model.LocKey = "";
+            OnPropertyChanged();
+            _owner.Save();
+        }
     }
 
     public PlanListViewModel Items { get; }

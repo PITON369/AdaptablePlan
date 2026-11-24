@@ -57,7 +57,8 @@
         <StackPanel Spacing="4" IsVisible="{Binding ShowDuration}">
             <TextBlock Text="{DynamicResource DurationMin}" />
             <TextBox Text="{Binding DurationText}"
-                     PlaceholderText="{DynamicResource DurationPlaceholder}" />
+                     PlaceholderText="{DynamicResource DurationPlaceholder}"
+                     TextInput="OnDigitsTextInput" TextChanged="OnDigitsTextChanged" />
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding ShowTimeVariants}">

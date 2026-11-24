@@ -177,6 +177,11 @@ public static class Strings
 
         // Оверлей времени
         ["TimeIsUp"] = ("Time is up!", "Время вышло!"),
+
+        // Дефолтные сферы плана
+        ["SphereProfession"] = ("Profession", "Профессия"),
+        ["SphereSport"] = ("Sport", "Спорт"),
+        ["SphereLanguage"] = ("Language", "Язык"),
     };
 
     public static string Language { get; private set; } = "en";
