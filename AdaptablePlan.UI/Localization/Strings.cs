@@ -33,6 +33,8 @@ public static class Strings
         ["YesDelete"] = ("Yes, delete", "Да, удалить"),
         ["AddTime"] = ("Add time", "Добавить время"),
         ["AddAfter"] = ("Add after", "Добавить после"),
+        ["MoveUp"] = ("Move up", "Выше"),
+        ["MoveDown"] = ("Move down", "Ниже"),
         ["AddPlan"] = ("Add plan", "Добавить план"),
         ["AddSphere"] = ("+ Add sphere", "+ Добавить сферу"),
         ["NewItem"] = ("New item", "Новый пункт"),

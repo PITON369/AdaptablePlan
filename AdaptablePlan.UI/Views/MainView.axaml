@@ -122,6 +122,12 @@
                 <Button Content="{DynamicResource Edit}"
                         Command="{Binding EditTaskCommand}"
                         IsEnabled="{Binding CanEditTask}" />
+                <Button Content="{DynamicResource MoveUp}"
+                        Command="{Binding SwapTaskUpCommand}"
+                        IsEnabled="{Binding CanEditTask}" />
+                <Button Content="{DynamicResource MoveDown}"
+                        Command="{Binding SwapTaskDownCommand}"
+                        IsEnabled="{Binding CanEditTask}" />
                 <Button Content="{DynamicResource AddAfter}"
                         Command="{Binding AddTaskAfterSelectedCommand}"
                         IsEnabled="{Binding CanEditTask}" />

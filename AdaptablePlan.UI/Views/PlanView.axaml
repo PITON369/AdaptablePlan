@@ -263,7 +263,8 @@
 
             <!-- Сетка года: месяцы с января по декабрь, всегда 4 столбца,
                  3 строки; у каждой ячейки свой список планов -->
-            <ItemsControl ItemsSource="{Binding CurrentPlan.Months}"
+            <ItemsControl Width="760" HorizontalAlignment="Left"
+                          ItemsSource="{Binding CurrentPlan.Months}"
                           IsVisible="{Binding IsYearMode}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -290,13 +291,14 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                    <TextBox MinWidth="60" HorizontalAlignment="Stretch"
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Grid.Column="0"
                                              PlaceholderText="{DynamicResource AddPlan}"
                                              Text="{Binding Items.NewItemText, Mode=TwoWay}" />
-                                    <Button Content="+" MinWidth="28"
+                                    <Button Grid.Column="1" Content="+" MinWidth="28"
+                                            Margin="2,0,0,0"
                                             Command="{Binding Items.AddCommand}" />
-                                </StackPanel>
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </DataTemplate>
