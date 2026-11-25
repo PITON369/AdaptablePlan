@@ -23,6 +23,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -35,15 +36,18 @@
                 <CheckBox Grid.ColumnSpan="3" Grid.Row="1"
                           Content="{DynamicResource HideUnshifted}"
                           IsChecked="{Binding HideUnshiftedTime, Mode=TwoWay}" />
+                <CheckBox Grid.ColumnSpan="3" Grid.Row="2"
+                          Content="{DynamicResource WrapFixedTasks}"
+                          IsChecked="{Binding WrapAroundFixedTasks, Mode=TwoWay}" />
                 <!-- План-время до границы дня относится к предыдущему дню -->
-                <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{DynamicResource DayStartsAt}" />
-                <TextBox Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left"
+                <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="{DynamicResource DayStartsAt}" />
+                <TextBox Grid.Row="3" Grid.Column="1" HorizontalAlignment="Left"
                          Text="{Binding DayStartText}" Width="80" PlaceholderText="07:30"
                          TextInput="OnTimeTextInput" TextChanged="OnTimeTextChanged" />
                 <!-- Пусто - стандартный системный звук окончания -->
-                <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="{DynamicResource TimeupSound}" />
-                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SoundFile}" />
-                <Button Grid.Row="3" Grid.Column="2"
+                <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="{DynamicResource TimeupSound}" />
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SoundFile}" />
+                <Button Grid.Row="4" Grid.Column="2"
                         Content="{DynamicResource Browse}" Click="OnBrowseSound" />
             </Grid>
         </StackPanel>

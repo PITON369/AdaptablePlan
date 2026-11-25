@@ -122,6 +122,8 @@ public static class Strings
             "Запускать следующую задачу после завершения"),
         ["HideUnshifted"] = ("Hide unshifted time columns in Day view",
             "Скрывать столбцы несдвинутого времени в режиме День"),
+        ["WrapFixedTasks"] = ("Shifted tasks wrap around fixed ones (otherwise they are cut)",
+            "Сдвинутые таски обтекают фиксированные (иначе обрезаются)"),
         ["DayStartsAt"] = ("Day starts at", "День начинается в"),
         ["TimeupSound"] = ("Time-up sound", "Звук окончания задачи"),
         ["Appearance"] = ("Appearance", "Внешний вид"),

@@ -24,6 +24,10 @@ public partial class ScheduleItem : ObservableObject
     // относится к предыдущему дню. Date остаётся календарной датой разворота.
     public DateTime PlanDay { get; init; }
 
+    // Ключ порядка дня для кусков таски после FixedTime (обтекание): такой
+    // кусок стоит по фактическому месту, а не по базовому старту таски.
+    public TimeSpan? SortKeyOverride { get; init; }
+
     [ObservableProperty]
     private bool _isSelected;
 

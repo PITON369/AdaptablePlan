@@ -133,6 +133,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hideUnshiftedTime;
 
+    // false — сдвинутые таски обрезаются до FixedTime, true — обтекают его.
+    [ObservableProperty]
+    private bool _wrapAroundFixedTasks;
+
     // Граница дня: план-время до неё относится к предыдущему дню
     // (00:01-06:59 при старте дня 07:00 - ещё вчера).
     [ObservableProperty]
@@ -190,6 +194,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnFontSizeChanged(double value) => SaveAppearance();
     partial void OnHideUnshiftedTimeChanged(bool value) => SaveAppearance();
+    partial void OnWrapAroundFixedTasksChanged(bool value)
+    {
+        SaveAppearance();
+        RegenerateSchedule();
+    }
     partial void OnDayStartChanged(TimeSpan? value)
     {
         // Текст переписывается, только если он не даёт то же время: иначе
@@ -253,6 +262,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Theme = Theme,
             Language = Language,
             HideUnshiftedTime = HideUnshiftedTime,
+            WrapAroundFixedTasks = WrapAroundFixedTasks,
             DayStart = (DayStart ?? new TimeSpan(7, 0, 0)).ToString(@"hh\:mm"),
             SoundFile = SoundFile,
         }.Save();
@@ -283,6 +293,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Theme = settings.Theme;
         Language = settings.Language;
         HideUnshiftedTime = settings.HideUnshiftedTime;
+        WrapAroundFixedTasks = settings.WrapAroundFixedTasks;
         if (TimeSpan.TryParse(settings.DayStart, out var dayStart))
             DayStart = dayStart;
         SoundFile = settings.SoundFile;

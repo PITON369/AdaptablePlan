@@ -1,9 +1,13 @@
+using AdaptablePlan.Core.Data;
+using AdaptablePlan.Core.Models;
 using AdaptablePlan.UI.Localization;
 using AdaptablePlan.UI.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Avalonia.Threading;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AdaptablePlan.UI.ViewModels;
@@ -25,23 +29,36 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private string _timeUpTaskName = string.Empty;
 
-    // Отображаемый конец = база конца + сдвиг по базовому старту - та же
-    // арифметика, что в FinishRunningTaskAsync (парсить текст нельзя:
-    // при уходе за полночь он "завёрнут"). Вызывать после RegenerateSchedule,
-    // чтобы сдвиг уже включал только что добавленное событие старта.
+    // Конец таймера = отображаемый конец таски: тот же сдвиг от событий дня
+    // и та же обрезка/обтекание против FixedTime, что рисует RegenerateSchedule
+    // (парсить текст нельзя: при уходе за полночь он "завёрнут"). Вызывать
+    // после RegenerateSchedule, чтобы сдвиг уже включал событие старта.
     private void StartTaskTimer(ScheduleItem item)
     {
         StopTaskTimer();
         var (baseStart, baseEnd) = BaseInterval(item);
-        if (baseStart == null || baseEnd == null || _dayOffset == null)
+        if (baseStart == null || baseEnd == null)
             return;
 
         var startMin = (int)baseStart.Value.TotalMinutes;
-        var endMin = (int)baseEnd.Value.TotalMinutes + _dayOffset.CumulativeShift(startMin);
-        var startDate = item.Date.Date.AddMinutes(startMin);
-        var endDate = item.Date.Date.AddMinutes(endMin);
-        if (endDate <= startDate)
-            endDate = endDate.AddDays(1); // таска перешла за полночь
+        var endMin = (int)baseEnd.Value.TotalMinutes;
+        var pieces = new List<(TimeSpan Start, TimeSpan End)> { (baseStart.Value, baseEnd.Value) };
+        if (_dayOffset != null && item.Template.Type != TaskType.FixedTime
+            && _dayOffset.Date == item.Date.ToString("yyyy-MM-dd"))
+        {
+            var shiftedStart = TimeSpan.FromMinutes(startMin + _dayOffset.CumulativeShift(startMin));
+            var shiftedEnd = TimeSpan.FromMinutes(endMin + _dayOffset.CumulativeShift(endMin));
+            pieces = ScheduleExpander.ResolveFixedOverlap(shiftedStart, shiftedEnd,
+                FixedIntervalsForPlanDay(item.PlanDay), WrapAroundFixedTasks);
+        }
+        var firstStart = pieces[0].Start;
+        var lastEnd = pieces.Max(p => p.End);
+        var startDate = item.Date.Date.AddMinutes((int)firstStart.TotalMinutes);
+        var endDate = item.Date.Date.AddMinutes((int)lastEnd.TotalMinutes);
+        // Таска перешла за полночь. Сплюснутая в ноль (строгий режим при
+        // наезде на FixedTime) звенит сразу - фиксированная уже началась.
+        if (endDate < startDate)
+            endDate = endDate.AddDays(1);
         _timerTarget = endDate;
 
         _taskTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,

@@ -143,4 +143,41 @@ public static class ScheduleExpander
 
     private static int Mod(int x, int m)
         => ((x % m) + m) % m;
+
+    // Пересечение сдвинутой таски с фиксированными тасками план-дня.
+    // Строгий режим: таска стоит до фиксированной - конец режется её стартом,
+    // заехавшая внутрь сжимается в нулевую точку на этом старте. Обтекание:
+    // часть до фиксированной остаётся, остальная встаёт после её конца.
+    public static List<(TimeSpan Start, TimeSpan End)> ResolveFixedOverlap(
+        TimeSpan start, TimeSpan end, IReadOnlyList<(TimeSpan Start, TimeSpan End)> fixedIntervals, bool wrap)
+    {
+        // Перенос через полночь - только когда конец строго меньше начала;
+        // равные края - вырожденный нулевой интервал (посдвигово обрезанная
+        // таска), его за полночь растягивать нельзя.
+        var e = end < start ? end.Add(TimeSpan.FromHours(24)) : end;
+        var pieces = new List<(TimeSpan, TimeSpan)> { (start, e) };
+        foreach (var (fs, fe) in fixedIntervals.OrderBy(f => f.Start))
+        {
+            var fEnd = fe <= fs ? fe.Add(TimeSpan.FromHours(24)) : fe;
+            for (var i = pieces.Count - 1; i >= 0; i--)
+            {
+                var (ps, pe) = pieces[i];
+                if (ps >= fEnd || pe <= fs)
+                    continue;
+                if (!wrap)
+                {
+                    pieces[i] = (ps < fs ? ps : fs, fs);
+                    continue;
+                }
+                var split = ps > fs ? ps : fs;
+                var tailStart = fEnd + (split - fs);
+                if (ps < fs)
+                    pieces[i] = (ps, split);
+                else
+                    pieces.RemoveAt(i);
+                pieces.Add((tailStart, tailStart + (pe - split)));
+            }
+        }
+        return pieces;
+    }
 }

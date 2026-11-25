@@ -134,10 +134,31 @@ public partial class MainWindowViewModel
     private static TimeSpan? ParseTime(string? t)
         => ScheduleExpander.TryParseTime(t, out var ts) ? ts : null;
 
+    // Фиксированные интервалы план-дня: окно в 2 календарных дня, чтобы
+    // утро следующего дня до границы дня попало в свой план-день.
+    private List<(TimeSpan Start, TimeSpan End)> FixedIntervalsForPlanDay(DateTime planDay)
+    {
+        var result = new List<(TimeSpan, TimeSpan)>();
+        var dayStart = DayStart ?? new TimeSpan(7, 0, 0);
+        foreach (var t in TaskTemplates.Concat(OneTimeTasks).Where(x => x.Type == TaskType.FixedTime))
+            foreach (var (date, start, end) in ScheduleExpander.Expand(t, planDay, 2))
+            {
+                if (!ScheduleExpander.TryParseTime(start, out var fs) || !ScheduleExpander.TryParseTime(end, out var fe))
+                    continue;
+                if (fe <= fs)
+                    fe = fe.Add(TimeSpan.FromHours(24));
+                if ((fs < dayStart ? date.AddDays(-1) : date) == planDay)
+                    result.Add((fs, fe));
+            }
+        return result;
+    }
+
     // Ключ порядка план-дня: базовый старт; ночные пункты (до границы дня)
     // идут в конец дня (+24ч), таски без времени - самими последними.
     private TimeSpan DayOrderKey(ScheduleItem i)
     {
+        if (i.SortKeyOverride is TimeSpan k)
+            return k;
         var t = ParseTime(i.BaseStartTime);
         if (t == null)
             return TimeSpan.MaxValue;
@@ -193,6 +214,17 @@ public partial class MainWindowViewModel
         var dayStart = DayStart ?? new TimeSpan(7, 0, 0);
         var planToday = PlanToday;
 
+        // Фиксированные интервалы по план-дням окна: для обрезки/обтекания
+        // наезжающих сдвинутых тасок (FixedTime не сдвигается, время плановое).
+        var fixedByPlanDay = new Dictionary<DateTime, List<(TimeSpan Start, TimeSpan End)>>();
+        for (var i = 0; i < dayCount; i++)
+        {
+            var planDay = windowStart.AddDays(i);
+            var intervals = FixedIntervalsForPlanDay(planDay);
+            if (intervals.Count > 0)
+                fixedByPlanDay[planDay] = intervals;
+        }
+
         // Разворот всех шаблонов в пункты на даты окна; ключ - план-день:
         // базовый старт до границы дня уходит в предыдущий день.
         var byDate = new Dictionary<DateTime, List<ScheduleItem>>();
@@ -208,13 +240,16 @@ public partial class MainWindowViewModel
                 var planDay = date;
                 if (ScheduleExpander.TryParseTime(baseTimes.Item1, out var bs) && bs < dayStart)
                     planDay = date.AddDays(-1);
-                var item = new ScheduleItem
+                if (!byDate.TryGetValue(planDay, out var list))
+                    byDate[planDay] = list = new List<ScheduleItem>();
+
+                ScheduleItem MakeItem(string startTime, string endTime, TimeSpan? sortKey = null) => new()
                 {
                     Date = date,
                     PlanDay = planDay,
                     Template = t,
-                    StartTime = start,
-                    EndTime = end,
+                    StartTime = startTime,
+                    EndTime = endTime,
                     BaseStartTime = baseTimes.Item1,
                     BaseEndTime = baseTimes.Item2,
                     IsToday = planDay == planToday,
@@ -223,10 +258,29 @@ public partial class MainWindowViewModel
                     IsDone = planDay == planToday && _dayOffset != null
                         && _dayOffset.Date == planToday.ToString("yyyy-MM-dd")
                         && _dayOffset.DoneTaskIds.Contains(t.Id),
+                    SortKeyOverride = sortKey,
                 };
-                if (!byDate.TryGetValue(planDay, out var list))
-                    byDate[planDay] = list = new List<ScheduleItem>();
-                list.Add(item);
+
+                // Наезд на фиксированные таски: обрезка/обтекание (режим в
+                // настройках). Перенесённый кусок сортируется по фактическому
+                // месту - за фиксированной, а не по базовому старту таски.
+                if (t.Type != TaskType.FixedTime
+                    && ScheduleExpander.TryParseTime(start, out var shiftedStart)
+                    && ScheduleExpander.TryParseTime(end, out var shiftedEnd)
+                    && fixedByPlanDay.TryGetValue(planDay, out var fixedItems))
+                {
+                    var resolved = ScheduleExpander.ResolveFixedOverlap(shiftedStart, shiftedEnd, fixedItems, WrapAroundFixedTasks);
+                    for (var p = 0; p < resolved.Count; p++)
+                    {
+                        var pieceStart = resolved[p].Start;
+                        list.Add(MakeItem(
+                            ScheduleExpander.FormatTime(pieceStart),
+                            ScheduleExpander.FormatTime(resolved[p].End),
+                            p == 0 ? null : pieceStart < dayStart ? pieceStart.Add(TimeSpan.FromHours(24)) : pieceStart));
+                    }
+                    continue;
+                }
+                list.Add(MakeItem(start, end));
             }
         }
 

@@ -21,6 +21,10 @@ public class AppSettings
     // Скрыть в Day-списке столбцы с базовым (несдвинутым) временем.
     public bool HideUnshiftedTime { get; set; }
 
+    // Сдвинутые таски наезжают на FixedTime: false — обрезаются до его старта,
+    // true — обтекают его (часть после его конца переносится за конец).
+    public bool WrapAroundFixedTasks { get; set; }
+
     // Граница дня "HH:mm": план-время до неё относится к предыдущему дню.
     public string DayStart { get; set; } = "07:00";
 
