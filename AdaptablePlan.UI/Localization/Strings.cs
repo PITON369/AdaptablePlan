@@ -142,6 +142,12 @@ public static class Strings
         ["DeleteOldOneTime"] = ("Delete these one-time tasks?", "Удалить эти разовые таски?"),
         ["DeleteTaskConfirm"] = ("Delete this task?", "Удалить эту таску?"),
         ["NoOneTimeTasks"] = ("No one-time tasks to delete", "Разовые таски отсутствуют"),
+        ["CollapseFixed"] = ("{0}: shifted into {2}'s time ({3}-{4}) - starts and ends at {1}; planned {5}-{6}",
+            "{0}: сдвинулась на время {2} ({3}-{4}) - началась и закончилась в {1}; по плану {5}-{6}"),
+        ["CollapseShift"] = ("{0}: the day's shifts made it start and end at {1}; planned {2}-{3}",
+            "{0}: из-за сдвигов дня началась и закончилась в {1}; по плану {2}-{3}"),
+        ["FixedTask"] = ("a fixed task", "фиксированная таска"),
+        ["FixedCollision"] = ("It's time for {0}, but {1} is still running", "Время {0} подошло, а {1} ещё идёт"),
         ["DeleteConfirm"] = ("Delete all data? This cannot be undone.",
             "Удалить все данные? Это действие нельзя отменить."),
 

@@ -145,9 +145,10 @@ public static class ScheduleExpander
         => ((x % m) + m) % m;
 
     // Пересечение сдвинутой таски с фиксированными тасками план-дня.
-    // Строгий режим: таска стоит до фиксированной - конец режется её стартом,
-    // заехавшая внутрь сжимается в нулевую точку на этом старте. Обтекание:
-    // часть до фиксированной остаётся, остальная встаёт после её конца.
+    // Строгий режим: доезжающая до фиксированной часть режется её стартом;
+    // целиком уехавшая внутрь остаётся точкой на её старте, а остаток встаёт
+    // после её конца. Обтекание: часть до фиксированной остаётся, остальная
+    // встаёт после её конца.
     public static List<(TimeSpan Start, TimeSpan End)> ResolveFixedOverlap(
         TimeSpan start, TimeSpan end, IReadOnlyList<(TimeSpan Start, TimeSpan End)> fixedIntervals, bool wrap)
     {
@@ -166,7 +167,18 @@ public static class ScheduleExpander
                     continue;
                 if (!wrap)
                 {
-                    pieces[i] = (ps < fs ? ps : fs, fs);
+                    if (ps >= fs)
+                    {
+                        // Таска целиком уехала во время фиксированной: точка на
+                        // её старте (след схлопнувшейся таски) и остаток после
+                        // её конца, чтобы время не терялось.
+                        pieces[i] = (fs, fs);
+                        pieces.Add((fEnd, fEnd + (pe - ps)));
+                    }
+                    else
+                    {
+                        pieces[i] = (ps, fs);
+                    }
                     continue;
                 }
                 var split = ps > fs ? ps : fs;

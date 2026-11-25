@@ -193,6 +193,46 @@
                     </StackPanel>
                 </Border>
             </Border>
+            <!-- Таска, обрезанная фиксированной до нуля: сдвинутый раз исходный
+                 интервал целиком ушёл во время фиксированной -->
+            <Border IsVisible="{Binding IsCollapseNoticeOpen}"
+                    Background="{DynamicResource DialogOverlayBackground}">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource DialogCardBackground}"
+                        BorderBrush="{DynamicResource WeekGridLineBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="24"
+                        MinWidth="280" MaxWidth="480">
+                    <StackPanel Spacing="16">
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   Text="{Binding CollapseNoticeText}"
+                                   TextWrapping="Wrap" />
+                        <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
+                                MinHeight="44" Padding="16,8"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                Command="{Binding OkCollapseNoticeCommand}" />
+                    </StackPanel>
+                </Border>
+            </Border>
+            <!-- Наезд фиксированной таски на идущую: её время подошло, а таймер
+                 текущей таски ещё тикает -->
+            <Border IsVisible="{Binding IsFixedCollisionOpen}"
+                    Background="{DynamicResource DialogOverlayBackground}">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource DialogCardBackground}"
+                        BorderBrush="{DynamicResource WeekGridLineBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="24"
+                        MinWidth="280" MaxWidth="480">
+                    <StackPanel Spacing="16">
+                        <TextBlock Foreground="{DynamicResource DialogCardForeground}"
+                                   Text="{Binding FixedCollisionText}"
+                                   TextWrapping="Wrap" />
+                        <Button Content="{DynamicResource OK}" HorizontalAlignment="Center"
+                                MinHeight="44" Padding="16,8"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                Command="{Binding OkFixedCollisionCommand}" />
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
     </Grid>
 </Window>

@@ -27,6 +27,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private DayOffset? _dayOffset;
     private Guid _runningTaskId;
 
+    // Событие старта текущей таски и момент её запуска: мгновенные
+    // старт/стоп (клики ради выделения) лавиной сдвигают весь день -
+    // при завершении раньше пары минут оба события откатываются.
+    private DayShiftEvent? _pendingStartEvent;
+    private DateTime _runningStartedAt;
+
     private static TaskTemplate MakeDefaultTask(string name, TaskType type, int durationMinutes, params TaskTimeVariant[] variants)
         => new()
         {
@@ -489,14 +495,20 @@ public partial class MainWindowViewModel : ViewModelBase
         // он «завёрнут» (23:xx), и дельта улетает на ±7 часов (лавина сдвигов).
         // FixedTime события не пишет: он всегда идёт по своему времени и
         // ничего о сдвиге расписания не сообщает.
+        DayShiftEvent? added = null;
         if (baseStart != null && item.Template.Type != TaskType.FixedTime)
         {
             var baseMin = (int)baseStart.Value.TotalMinutes;
             var delta = (int)DateTime.Now.TimeOfDay.TotalMinutes
                 - (baseMin + _dayOffset!.CumulativeShift(baseMin));
             if (delta != 0)
-                _dayOffset.Events.Add(new DayShiftEvent { TimeMinutes = baseMin, DeltaMinutes = delta });
+            {
+                added = new DayShiftEvent { TimeMinutes = baseMin, DeltaMinutes = delta };
+                _dayOffset.Events.Add(added);
+            }
         }
+        _pendingStartEvent = added;
+        _runningStartedAt = DateTime.Now;
         RegenerateSchedule();
         await SaveDayOffsetAsync();
         StartTaskTimer(item);
@@ -521,12 +533,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _runningTaskId = Guid.Empty;
         EnsureDayRecord();
+        var instant = DateTime.Now - _runningStartedAt < TimeSpan.FromMinutes(2);
+        if (instant && _pendingStartEvent != null)
+            _dayOffset!.Events.Remove(_pendingStartEvent);
+        _pendingStartEvent = null;
         MarkDone(item.Template.Id);
         // Отображаемый конец = база конца + сдвиг, посчитанный по базовому
         // старту (Expand двигает начало и конец одним сдвигом). Арифметика, не
         // парсинг текста — иначе «завёрнутое» за полночь время даёт лавину.
         // FixedTime события не пишет (см. StartSelectedTaskAsync).
-        if (baseEnd != null && baseStart != null && item.Template.Type != TaskType.FixedTime)
+        if (baseEnd != null && baseStart != null && !instant && item.Template.Type != TaskType.FixedTime)
         {
             var startMin = (int)baseStart.Value.TotalMinutes;
             var delta = (int)DateTime.Now.TimeOfDay.TotalMinutes
@@ -547,6 +563,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (AutoStartNextTask)
         {
             _runningTaskId = nextItem.Template.Id;
+            _runningStartedAt = DateTime.Now;
+            _pendingStartEvent = null;
             RegenerateSchedule();
             await SaveDayOffsetAsync();
             StartTaskTimer(nextItem);

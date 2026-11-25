@@ -88,6 +88,7 @@ public partial class MainWindowViewModel
     {
         if (_timerTarget - DateTime.Now > TimeSpan.Zero)
         {
+            CheckFixedCollision();
             UpdateTimeLeft();
             return;
         }
@@ -95,6 +96,46 @@ public partial class MainWindowViewModel
         SoundPlayer.Play(SoundFile);
         TimeUpTaskName = RunningItem()?.Template.Name ?? string.Empty;
         IsTimeUpOpen = true;
+    }
+
+    // Наезд фиксированной таски на идущую: момент её старта наступил, а
+    // таймер текущей таски ещё тикает дальше. Раз на фиксированную за день.
+    [ObservableProperty]
+    private bool _isFixedCollisionOpen;
+
+    [ObservableProperty]
+    private string _fixedCollisionText = string.Empty;
+
+    [RelayCommand]
+    private void OkFixedCollision() => IsFixedCollisionOpen = false;
+
+    private DateTime _fixedCheckDate;
+    private HashSet<int> _notifiedFixedCollisions = new();
+
+    private void CheckFixedCollision()
+    {
+        var item = RunningItem();
+        if (item == null || item.CustomSource != null || IsTimeUpOpen)
+            return;
+        if (_fixedCheckDate != item.PlanDay)
+        {
+            _fixedCheckDate = item.PlanDay;
+            _notifiedFixedCollisions.Clear();
+        }
+        var now = DateTime.Now;
+        foreach (var (fs, _) in FixedIntervalsForPlanDay(item.PlanDay))
+        {
+            var fsMin = (int)fs.TotalMinutes;
+            var started = item.PlanDay.Date.AddMinutes(fsMin);
+            if (now < started || _timerTarget <= started || !_notifiedFixedCollisions.Add(fsMin))
+                continue;
+            var fixedName = Schedule.FirstOrDefault(s => s.CustomSource == null
+                    && s.Template.Type == TaskType.FixedTime
+                    && s.StartTime == ScheduleExpander.FormatTime(fs))?.Template.Name
+                ?? Strings.Get("FixedTask");
+            FixedCollisionText = Strings.Format("FixedCollision", fixedName, item.Template.Name);
+            IsFixedCollisionOpen = true;
+        }
     }
 
     // OK в окне "Time is up": заканчиваем таску; при AutoStartNextTask

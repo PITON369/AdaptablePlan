@@ -307,8 +307,63 @@ public partial class MainWindowViewModel
         if (Mode == ScheduleMode.Week)
             BuildWeekGrid(windowStart, byDate);
 
+        CheckCollapsedTasks(byDate, planToday);
+
         OnPropertyChanged(nameof(CustomConflictText));
     }
+
+    // Схлопнутая в точку таска: её сдвинутый интервал целиком уехал во время
+    // фиксированной таски и строгий режим отрезал всё. Разовое уведомление на
+    // таску за день: состояние может держаться много пересчётов подряд.
+    [ObservableProperty]
+    private bool _isCollapseNoticeOpen;
+
+    [ObservableProperty]
+    private string _collapseNoticeText = string.Empty;
+
+    [RelayCommand]
+    private void OkCollapseNotice() => IsCollapseNoticeOpen = false;
+
+    private DateTime _collapseCheckDate;
+    private HashSet<Guid> _notifiedCollapseIds = new();
+
+    private void CheckCollapsedTasks(Dictionary<DateTime, List<ScheduleItem>> byDate, DateTime planToday)
+    {
+        if (_collapseCheckDate != planToday)
+        {
+            _collapseCheckDate = planToday;
+            _notifiedCollapseIds.Clear();
+        }
+        if (!byDate.TryGetValue(planToday, out var todayItems))
+            return;
+        var collapsed = todayItems
+            .Where(i => i.CustomSource == null && i.Template.Type != TaskType.FixedTime
+                && i.StartTime.Length > 0 && i.StartTime == i.EndTime)
+            .Select(i => (Template: i.Template, Zero: i, Fixed: FindFixedItem(todayItems, i.StartTime)))
+            .Distinct()
+            .ToList();
+        if (collapsed.Count == 0)
+            return;
+        var hasFresh = collapsed.Any(c => !_notifiedCollapseIds.Contains(c.Template.Id));
+        foreach (var c in collapsed)
+            _notifiedCollapseIds.Add(c.Template.Id);
+        if (!hasFresh)
+            return;
+        // Каждая строка сама объясняет, что случилось: где осталась таска,
+        // кто её сжал (фиксированная или события дня) и что было по плану.
+        CollapseNoticeText = string.Join("\n", collapsed.Select(c => c.Fixed != null
+            ? Strings.Format("CollapseFixed", c.Template.Name, c.Zero.StartTime,
+                c.Fixed.Template.Name, c.Fixed.StartTime, c.Fixed.EndTime,
+                c.Zero.BaseStartTime ?? "", c.Zero.BaseEndTime ?? "")
+            : Strings.Format("CollapseShift", c.Template.Name, c.Zero.StartTime,
+                c.Zero.BaseStartTime ?? "", c.Zero.BaseEndTime ?? "")));
+        IsCollapseNoticeOpen = true;
+    }
+
+    // Нулевой кусок в строгом режиме лежит на старте фиксированного интервала,
+    // поэтому виновника находим по совпадению времени старта.
+    private static ScheduleItem? FindFixedItem(List<ScheduleItem> items, string startTime)
+        => items.FirstOrDefault(i => i.Template.Type == TaskType.FixedTime && i.StartTime == startTime);
 
     // Данные Custom-страницы в коллекциях шаблонов: Schedule — обёртки записей
     // страницы (CustomSource указывает на исходную запись), Week-сетка — через
