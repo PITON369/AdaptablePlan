@@ -12,7 +12,7 @@ namespace AdaptablePlan.UI;
 internal static class SoundPlayer
 {
     [DllImport("winmm.dll")]
-    private static extern bool PlaySound(string name, IntPtr hmod, int flags);
+    private static extern bool PlaySound(string? name, IntPtr hmod, int flags);
 
     [DllImport("winmm.dll", CharSet = CharSet.Unicode)]
     private static extern int mciSendString(string command, StringBuilder? buffer, int bufferSize, IntPtr hwndCallback);

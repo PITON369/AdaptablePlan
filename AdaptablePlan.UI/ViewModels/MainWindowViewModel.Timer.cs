@@ -125,6 +125,9 @@ public partial class MainWindowViewModel
         var now = DateTime.Now;
         foreach (var (fs, _) in FixedIntervalsForPlanDay(item.PlanDay))
         {
+            // Свой старт идущей фиксированной таски - не наезд.
+            if (item.Template.Type == TaskType.FixedTime && ParseTime(item.BaseStartTime) == fs)
+                continue;
             var fsMin = (int)fs.TotalMinutes;
             var started = item.PlanDay.Date.AddMinutes(fsMin);
             if (now < started || _timerTarget <= started || !_notifiedFixedCollisions.Add(fsMin))
